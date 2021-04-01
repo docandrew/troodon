@@ -42,38 +42,38 @@ package body Render.Text is
             -- Use the text shader for this part.
             GLext.glUseProgram (Render.Shaders.textShaderProg);
             
-            glErr := GL.glGetError;
-            Ada.Text_IO.Put_Line ("glUseProgram GL error? " & glErr'Image);
+            -- glErr := GL.glGetError;
+            -- Ada.Text_IO.Put_Line ("glUseProgram GL error? " & glErr'Image);
 
             GL.glActiveTexture (texture  => GL.GL_TEXTURE0);
 
-            glErr := GL.glGetError;
-            Ada.Text_IO.Put_Line ("glActiveTexture error? " & glErr'Image);
+            -- glErr := GL.glGetError;
+            -- Ada.Text_IO.Put_Line ("glActiveTexture error? " & glErr'Image);
 
             GL.glGenTextures (n        => 1,
                               textures => tex'Access);
 
-            glErr := GL.glGetError;
-            Ada.Text_IO.Put_Line ("glGenTextures error? " & glErr'Image);
+            -- glErr := GL.glGetError;
+            -- Ada.Text_IO.Put_Line ("glGenTextures error? " & glErr'Image);
 
             GL.glBindTexture (target   => GL.GL_TEXTURE_2D, 
                               texture  => tex);
 
-            glErr := GL.glGetError;
-            Ada.Text_IO.Put_Line ("glBindTexture error? " & glErr'Image);
+            -- glErr := GL.glGetError;
+            -- Ada.Text_IO.Put_Line ("glBindTexture error? " & glErr'Image);
 
             -- Set text color
             GLext.glUniform4f (Render.Shaders.textUniformColor, 1.0, 1.0, 1.0, 1.0);
 
-            glErr := GL.glGetError;
-            Ada.Text_IO.Put_Line ("glUniform error? " & glErr'Image);
+            -- glErr := GL.glGetError;
+            -- Ada.Text_IO.Put_Line ("glUniform error? " & glErr'Image);
 
             -- Set text texture
             GLext.glUniform1i (location => Render.Shaders.textUniformTex,
                                v0       => 0);
 
-            glErr := GL.glGetError;
-            Ada.Text_IO.Put_Line ("glUniformi error? " & glErr'Image);
+            -- glErr := GL.glGetError;
+            -- Ada.Text_IO.Put_Line ("glUniformi error? " & glErr'Image);
 
             -- Set the viewport to the proper window dimensions
             GL.glViewport (x      => 0,
@@ -81,8 +81,8 @@ package body Render.Text is
                            width  => GL.GLsizei(windowW),
                            height => GL.GLsizei(windowH));
 
-            glErr := GL.glGetError;
-            Ada.Text_IO.Put_Line ("glViewport error? " & glErr'Image);
+            -- glErr := GL.glGetError;
+            -- Ada.Text_IO.Put_Line ("glViewport error? " & glErr'Image);
 
             -- Send shader our orthographic projection
             -- GLSL matrices are column major, so need to transpose here.
@@ -91,62 +91,62 @@ package body Render.Text is
                                       transpose => GL.GL_TRUE,
                                       value     => orthoM(1)'Access);
 
-            glErr := GL.glGetError;
-            Ada.Text_IO.Put_Line ("glUniformMatrix4fv error? " & glErr'Image);
+            -- glErr := GL.glGetError;
+            -- Ada.Text_IO.Put_Line ("glUniformMatrix4fv error? " & glErr'Image);
 
             -- require 1-byte alignment for uploading texture data
             GL.glPixelStorei (pname     => GL.GL_UNPACK_ALIGNMENT,
                               param     => 1);
 
-            glErr := GL.glGetError;
-            Ada.Text_IO.Put_Line ("glPixelStorei error? " & glErr'Image);
+            -- glErr := GL.glGetError;
+            -- Ada.Text_IO.Put_Line ("glPixelStorei error? " & glErr'Image);
 
             -- Clamp to edges to prevent scaling artifacts
             GL.glTexParameteri (target  => GL.GL_TEXTURE_2D,
                                 pname   => GL.GL_TEXTURE_WRAP_S,
                                 param   => GL.GL_CLAMP_TO_EDGE);
 
-            glErr := GL.glGetError;
-            Ada.Text_IO.Put_Line ("glTexParameteri error? " & glErr'Image);
+            -- glErr := GL.glGetError;
+            -- Ada.Text_IO.Put_Line ("glTexParameteri error? " & glErr'Image);
 
             GL.glTexParameteri (target  => GL.GL_TEXTURE_2D,
                                 pname   => GL.GL_TEXTURE_WRAP_T,
                                 param   => GL.GL_CLAMP_TO_EDGE);                                
 
-            glErr := GL.glGetError;
-            Ada.Text_IO.Put_Line ("glTexParameteri 2 error? " & glErr'Image);
+            -- glErr := GL.glGetError;
+            -- Ada.Text_IO.Put_Line ("glTexParameteri 2 error? " & glErr'Image);
 
             -- Linear filtering
             GL.glTexParameteri (target  => GL.GL_TEXTURE_2D,
                                 pname   => GL.GL_TEXTURE_MIN_FILTER,
                                 param   => GL.GL_LINEAR);
 
-            glErr := GL.glGetError;
-            Ada.Text_IO.Put_Line ("glTexParameteri 3 error? " & glErr'Image);
+            -- glErr := GL.glGetError;
+            -- Ada.Text_IO.Put_Line ("glTexParameteri 3 error? " & glErr'Image);
 
             GL.glTexParameteri (target  => GL.GL_TEXTURE_2D,
                                 pname   => GL.GL_TEXTURE_MAG_FILTER,
                                 param   => GL.GL_LINEAR);
 
-            glErr := GL.glGetError;
-            Ada.Text_IO.Put_Line ("glTexParameteri 4 error? " & glErr'Image);
+            -- glErr := GL.glGetError;
+            -- Ada.Text_IO.Put_Line ("glTexParameteri 4 error? " & glErr'Image);
 
             --@TODO Don't know that we need to set this up every time we draw. Can probably re-use.
             GLext.glGenBuffers (1, Render.Shaders.textVBO'Access);
-            glErr := GL.glGetError;
-            Ada.Text_IO.Put_Line ("glGenBuffers error? " & glErr'Image);
+            -- glErr := GL.glGetError;
+            -- Ada.Text_IO.Put_Line ("glGenBuffers error? " & glErr'Image);
 
             -- Set up VBO for our vertex data
             GLext.glEnableVertexAttribArray (GL.GLuint(Render.Shaders.textAttribCoord));
 
-            glErr := GL.glGetError;
-            Ada.Text_IO.Put_Line ("glEnableVertexAttribArray error? " & glErr'Image);
+            -- glErr := GL.glGetError;
+            -- Ada.Text_IO.Put_Line ("glEnableVertexAttribArray error? " & glErr'Image);
 
             GLext.glBindBuffer (target => GLext.GL_ARRAY_BUFFER,
                                 buffer => Render.Shaders.textVBO);
 
-            glErr := GL.glGetError;
-            Ada.Text_IO.Put_Line ("glBindBuffer error? " & glErr'Image);
+            -- glErr := GL.glGetError;
+            -- Ada.Text_IO.Put_Line ("glBindBuffer error? " & glErr'Image);
 
             GLext.glVertexAttribPointer (index      => GL.GLuint(Render.Shaders.textAttribCoord),
                                          size       => 4,
@@ -155,8 +155,8 @@ package body Render.Text is
                                          stride     => 0,
                                          pointer    => System.Null_Address);
 
-            glErr := GL.glGetError;
-            Ada.Text_IO.Put_Line ("glVertexAttribPointer error? " & glErr'Image);
+            -- glErr := GL.glGetError;
+            -- Ada.Text_IO.Put_Line ("glVertexAttribPointer error? " & glErr'Image);
 
             -- Loop through each character of the string, drawing it.                                         
             for c of s loop
@@ -176,8 +176,8 @@ package body Render.Text is
                                      c_type          => GL.GL_UNSIGNED_BYTE,
                                      pixels          => g.bitmap.buffer);
 
-                    glErr := GL.glGetError;
-                    Ada.Text_IO.Put_Line ("glTexImage2D error? " & glErr'Image);
+                    -- glErr := GL.glGetError;
+                    -- Ada.Text_IO.Put_Line ("glTexImage2D error? " & glErr'Image);
 
                     -- Make adjustments for letter placement
                     xt := x + Float(g.bitmap_left);
@@ -195,13 +195,13 @@ package body Render.Text is
                         4 => (xt + wt, yt,      1.0, 0.0)  -- top right
                     );
 
-                    Ada.Text_IO.Put_Line ("Drawing " & c);
-                    Ada.Text_IO.Put_Line (" Width: " & g.bitmap.width'Image);
-                    Ada.Text_IO.Put_Line (" Rows:  " & g.bitmap.rows'Image);
-                    Ada.Text_IO.Put_Line (" xt:    " & xt'Image);
-                    Ada.Text_IO.Put_Line (" yt:    " & yt'Image);
-                    Ada.Text_IO.Put_Line (" wt:    " & wt'Image);
-                    Ada.Text_IO.Put_Line (" ht:    " & ht'Image);
+                    -- Ada.Text_IO.Put_Line ("Drawing " & c);
+                    -- Ada.Text_IO.Put_Line (" Width: " & g.bitmap.width'Image);
+                    -- Ada.Text_IO.Put_Line (" Rows:  " & g.bitmap.rows'Image);
+                    -- Ada.Text_IO.Put_Line (" xt:    " & xt'Image);
+                    -- Ada.Text_IO.Put_Line (" yt:    " & yt'Image);
+                    -- Ada.Text_IO.Put_Line (" wt:    " & wt'Image);
+                    -- Ada.Text_IO.Put_Line (" ht:    " & ht'Image);
 
                     -- Ada.Text_IO.Put_Line ("Text Box: ");
                     -- Ada.Text_IO.Put_Line ("" & textBox(1)'Image);
@@ -215,8 +215,8 @@ package body Render.Text is
                                         data   => textBox'Address,
                                         usage  => GLext.GL_DYNAMIC_DRAW);
 
-                    glErr := GL.glGetError;
-                    Ada.Text_IO.Put_Line ("glBufferData error? " & glErr'Image);
+                    -- glErr := GL.glGetError;
+                    -- Ada.Text_IO.Put_Line ("glBufferData error? " & glErr'Image);
 
                     -- glErr := Interfaces.C.unsigned(textBox'Last);
                     -- Ada.Text_IO.Put_Line ("glDrawArrays count: " & glErr'Image);
@@ -224,8 +224,8 @@ package body Render.Text is
                                      first  => 0,
                                      count  => Interfaces.C.int(textBox'Last));
 
-                    glErr := GL.glGetError;
-                    Ada.Text_IO.Put_Line ("glDrawArrays error? " & glErr'Image);
+                    -- glErr := GL.glGetError;
+                    -- Ada.Text_IO.Put_Line ("glDrawArrays error? " & glErr'Image);
 
                     -- Advance the coords to the next char
                     -- advance is in units of pixel/64
@@ -235,17 +235,17 @@ package body Render.Text is
             end loop;
 
             GLext.glDisableVertexAttribArray (GL.GLuint(Render.Shaders.textAttribCoord));
-            glErr := GL.glGetError;
-            Ada.Text_IO.Put_Line ("glDisableVertexAttribArray error? " & glErr'Image);
+            -- glErr := GL.glGetError;
+            -- Ada.Text_IO.Put_Line ("glDisableVertexAttribArray error? " & glErr'Image);
 
             GL.glDeleteTextures (1, tex'Access);
-            glErr := GL.glGetError;
-            Ada.Text_IO.Put_Line ("glDeleteTextures error? " & glErr'Image);
+            -- glErr := GL.glGetError;
+            -- Ada.Text_IO.Put_Line ("glDeleteTextures error? " & glErr'Image);
 
             -- If we re-use the VBO can remove this line.
             GLext.glDeleteBuffers (1, Render.Shaders.textVBO'Access);
-            glErr := GL.glGetError;
-            Ada.Text_IO.Put_Line ("glDeleteBuffers error? " & glErr'Image);
+            -- glErr := GL.glGetError;
+            -- Ada.Text_IO.Put_Line ("glDeleteBuffers error? " & glErr'Image);
 
             -- Stop using the text shader
             GLext.glUseProgram (0);

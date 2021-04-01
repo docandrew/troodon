@@ -164,8 +164,7 @@ package body setup is
     begin
         screenNumber := Xlib.XDefaultScreen(display);
         
-        -- Get XCB connection from display
-        --connection := xcb.xcb_connect (Null_Ptr, screenNumber'Access);
+        -- Get XCB connection from display. Have to use Xlib here for OpenGL.
         connection := Xlib_xcb.XGetXCBConnection(display);
         
         if connection = null then
@@ -211,11 +210,16 @@ package body setup is
         Ada.Text_IO.Put_Line (" black pixel.....:" & screen.black_pixel'Image);
         Ada.Text_IO.Put_Line (" Root Window.....:" & screen.root'Image);
 
-        -- Make sure another window manager isn't running
+        -- Make sure another window manager isn't running, and register for events
+        -- which defines Troodon as _the_ window manager.
         cookie := xcb_grab_server (connection);
 
-        rootAttributes.event_mask := XCB_EVENT_MASK_SUBSTRUCTURE_NOTIFY or  -- if additional screen plugged in
-                                     XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT;  -- resize
+        rootAttributes.event_mask := XCB_EVENT_MASK_SUBSTRUCTURE_NOTIFY or     -- if additional screen plugged in
+                                     XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT or   -- resize
+                                     XCB_EVENT_MASK_POINTER_MOTION or
+                                     XCB_EVENT_MASK_BUTTON_PRESS or
+                                     XCB_EVENT_MASK_BUTTON_RELEASE or
+                                     XCB_EVENT_MASK_STRUCTURE_NOTIFY;
 
         cookie := xcb_change_window_attributes_aux_checked(c  => connection,
                                                    window     => screen.root, 

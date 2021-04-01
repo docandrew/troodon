@@ -14,13 +14,27 @@ with GLX;
 with xcb; use xcb;
 with xproto; use xproto;
 
-with frames;
-with setup;
-with util; use util;
+with Frames;
+with Setup;
+with Util; use Util;
 
 package body events is
 
-    focusedWindow : xcb_window_t;
+    focusedWindow   : xcb_window_t;
+
+    -- Window movement & resizing.
+    -- need both the original window pos
+    -- and the mouse pos, since we want
+    -- to adjust the window position by
+    -- the delta, not just put the window
+    -- where the mouse is.
+    winStartX       : Interfaces.C.short;   
+    winStartY       : Interfaces.C.short;   
+    dragStartX      : Interfaces.C.short;   
+    dragStartY      : Interfaces.C.short;   
+    dragFrame       : xcb_window_t;         
+    mouseX          : Interfaces.C.short;
+    mouseY          : Interfaces.C.short;
     
     ---------------------------------------------------------------------------
     -- handleMapRequest
@@ -28,8 +42,8 @@ package body events is
     procedure handleMapRequest (connection : access xcb_connection_t;
                                 event      : eventPtr;
                                 rend       : render.Renderer) is
-        use frames;
-        use render;
+        use Frames;
+        use Render;
 
         type mapRequestPtr is access all xcb_map_request_event_t;
         mapRequestEvent : mapRequestPtr;
@@ -66,14 +80,14 @@ package body events is
 
         function toMapEvent is new Ada.Unchecked_Conversion (Source => eventPtr, Target => mapRequestPtr);
     begin
-        Ada.Text_IO.Put_Line("Enter handleMapRequest");
+        Ada.Text_IO.Put_Line ("Enter handleMapRequest");
         mapRequestEvent := toMapEvent (event);
 
         -- See if the map event is for a frame we've already created.
-        if isFrame(mapRequestEvent.window) then
+        if isFrame (mapRequestEvent.window) then
             -- If so, go ahead and map it as-is.
             declare
-                F : Frame := getFrameFromList(mapRequestEvent.window);
+                F : Frame := getFrameFromList (mapRequestEvent.window);
             begin
                 F.map;
                 return;
@@ -81,16 +95,16 @@ package body events is
         end if;
 
         -- If not, is this for an app window we've already framed?
-        if hasFrame(mapRequestEvent.window) then
+        if hasFrame (mapRequestEvent.window) then
             -- If so, go ahead and get its frame and map it.
-            getFrameOfWindow(mapRequestEvent.window).map;
+            getFrameOfWindow (mapRequestEvent.window).map;
             return;
         end if;
 
         -- If EWMH in use, and this window sets the _NET_WM_WINDOW_TYPE property, honor that here,
         -- map the window without framing.
         if setup.ewmh /= null then
-            winType := getAtomProperty(connection, mapRequestEvent.window, setup.ewmh.u_NET_WM_WINDOW_TYPE);
+            winType := getAtomProperty (connection, mapRequestEvent.window, setup.ewmh.u_NET_WM_WINDOW_TYPE);
 
             -- if a dock, then map this as-is.
             -- @TODO keep this top-level?
@@ -158,14 +172,10 @@ package body events is
 
     ---------------------------------------------------------------------------
     -- handleButtonPress
-    -- Notes: if our mouse notifications are coming from root window (because
-    --  we called grabMouse there), then buttonEvent.child will have the
-    --  window we clicked on. Unless we clicked on empty space, in which case
-    --  it will crash. If our mouse notifications are coming from an app window,
-    --  there's no child, and it will crash.
     ---------------------------------------------------------------------------
     procedure handleButtonPress (connection : access xcb_connection_t; event : eventPtr) is
         use ASCII;
+        use Frames;
     
         type buttonEventPtr is access all xcb_button_press_event_t;
         
@@ -173,6 +183,7 @@ package body events is
         cookie      : xcb_void_cookie_t;
         ignore      : Interfaces.C.int;
         focusWin    : xcb_window_t;
+        geom        : access xcb_get_geometry_reply_t;
 
         function toButtonEvent is new Ada.Unchecked_Conversion (Source => events.eventPtr, Target => buttonEventPtr);
         function toCharsPtr is new Ada.Unchecked_Conversion (Source => events.eventPtr, Target => Interfaces.C.Strings.chars_ptr);
@@ -180,8 +191,8 @@ package body events is
         -- Raise window to top of stack
         procedure raiseToTop (connection : access xcb_connection_t; win : xcb_window_t) is
             winAttr : aliased xcb_configure_window_value_list_t;
-            cookie : xcb_void_cookie_t;
-            ignore : Interfaces.C.int;
+            cookie  : xcb_void_cookie_t;
+            ignore  : Interfaces.C.int;
         begin
             winAttr.stack_mode := xcb_stack_mode_t'Pos (XCB_STACK_MODE_ABOVE);
             cookie := xcb_configure_window_aux(c          => connection, 
@@ -200,143 +211,41 @@ package body events is
                               " on window"   & buttonEvent.event'Image &
                               " on child"    & buttonEvent.child'Image);
 
-        raiseToTop(connection, buttonEvent.event);
+        -- Whether its a frame or not, we can raiseToTop
+        raiseToTop (connection, buttonEvent.event);
 
-        -- We look for press on the frame window. If we get a click with no
-        -- child set, then we know we clicked on the frame or an un-framed
-        -- window.
-        -- If we press on the frame, then we can start dragging.
-        -- If this was _not_ a frame click, then just pass the event to the app window.
-        -- If an unframed window, then it already got the event since there's no frame
-        -- to grab it.
+        if isFrame (buttonEvent.event) then
+            -- Clicked on a frame. Register the start pos in case this turns into a drag.
+            --@TODO see if this was on the resize area.
+            dragFrame  := buttonEvent.event;
+            dragStartX := buttonEvent.root_x;
+            dragStartY := buttonEvent.root_y;
+            
+            -- Need to get geometry of window to determine its current pos
+            geom := xcb_get_geometry_reply (c      => connection,
+                                            cookie => xcb_get_geometry (connection, buttonEvent.event),
+                                            e      => System.Null_Address);
 
-        -- @TODO - need a way to get the app from inside the frame so we can focus the app
-        --  when the frame is clicked.
-        --  (separate frame->app map)
-        --focusWin := (if buttonEvent.child = 0 then buttonEvent.event else buttonEvent.child);
+            if geom /= null then
+                winStartX := geom.x;
+                winStartY := geom.y;
+            end if;
 
-        -- If we're exposing a window, expose the frame too (if it has one) and vice versa.
-        if isFrame(buttonEvnet.window) then
-            -- Clicked on a frame. Register the start pos. 
-            getFrameFromList(exposeEvent.window).
-        elsif hasFrame(exposeEvent.window) then
-            -- exposing a framed application window
-            getFrameOfWindow(exposeEvent.window).drawTitleBar;
+            focusWin := getFrameFromList(buttonEvent.event).appWindow;
+            Ada.Text_IO.Put_Line ("Clicked on frame, focusing " & focusWin'Image);
+        elsif hasFrame (buttonEvent.event) then
+            -- Focus the window, but let the app decide how to deal with the event.
+            focusWin := buttonEvent.event;
+            Ada.Text_IO.Put_Line ("Clicked on app, focusing " & focusWin'Image);
         else
-            -- exposing a non-framed window, just let it expose.
-            -- @TODO if we determine this is a DE menu or something like that
-            --  then we'll want to draw it here.
-            null;
+            -- Clicked on a non-framed window. 
+            focusWin := buttonEvent.event;
         end if;
         
         cookie := xcb_set_input_focus(c           => connection,
                                       revert_to   => xcb_input_focus_t'Pos(XCB_INPUT_FOCUS_POINTER_ROOT),
                                       focus       => focusWin,
                                       time        => XCB_CURRENT_TIME);
-        -- If the frame was pressed, continue to maintain the grab until we release, since it
-        -- might be a drag or resize.
-
-        -- If the child was pressed, go ahead and ungrab so it can receive the events.
-        -- if buttonEvent.child = 0 then
-        --     cookie := xcb_ungrab_button(c => connection,
-        --                                 button => 1,
-        --                                 grab_window => )
-        -- end if;
-            -- Ada.Text_IO.Put_Line("Sending event to child " & buttonEvent.child'Image);
-            -- -- cookie := xcb_send_event(c           => connection,
-            -- --                          propagate   => 0,   -- don't want this event back after we send it down.
-            -- --                          destination => buttonEvent.child,
-            -- --                          event_mask  => XCB_EVENT_MASK_BUTTON_PRESS,
-            -- --                          event       => toCharsPtr (event));
-            -- cookie := xcb_allow_events(c => connection,
-            --                            mode => xcb_allow_t'Pos(XCB_ALLOW_REPLAY_POINTER),
-            --                            time => buttonEvent.time);
-
-            -- ignore := xcb_flush(connection);
-        -- end if;
-
-        -- --  geometryCookie := xcb_get_geometry (c => connection, drawable => window);
-
-        -- --  geometry := xcb_get_geometry_reply (c => connection, 
-        -- --                                      cookie => geometryCookie, 
-        -- --                                      e => xcbError'Address);
-        
-        -- geom := getWindowGeometry(connection, window, errorPtr(xcbError));
-
-        -- -- for debugging
-        -- if xcbError /= null then
-        --     Ada.Text_IO.Put_Line("Error getting geometry: " & xcbError.error_code'Image);
-        -- end if;
-
-        -- Ada.Text_IO.Put_Line ("buttonEvent->response_type" & buttonEvent.response_type'Image & LF & 
-        --                       " buttonEvent->sequence    " & buttonEvent.sequence'Image & LF &
-        --                       " buttonEvent->detail      " & buttonEvent.detail'Image & LF &
-        --                       " buttonEvent->state       " & buttonEvent.state'Image);
-
-        -- if buttonEvent.detail = 1 then
-        --     -- mouse button 1
-        --     if buttonEvent.state = unsigned_short (XCB_MOD_MASK_1) then
-        --         -- holding Alt, enable movement
-        --         windowAttributes.border_width := 1;
-        --         focusedWindow := window;
-               
-        --         -- dummyCookie :=
-        --         --     xcb_warp_pointer
-        --         --       (c => connection, src_window => XCB_NONE, dst_window => window, src_x => 0, src_y => 0,
-        --         --        src_width => 0, src_height => 0, dst_x => 1, dst_y => 1);
-
-        --         dummyGrabCookie :=
-        --            xcb_grab_pointer
-        --               (c          => connection, owner_events => 0, grab_window => rootWindow,
-        --                event_mask =>
-        --                   unsigned_short
-        --                      (XCB_EVENT_MASK_BUTTON_RELEASE or XCB_EVENT_MASK_BUTTON_MOTION or
-        --                       XCB_EVENT_MASK_POINTER_MOTION_HINT),
-        --                pointer_mode  => xcb_grab_mode_t'Pos (XCB_GRAB_MODE_ASYNC),
-        --                keyboard_mode => xcb_grab_mode_t'Pos (XCB_GRAB_MODE_ASYNC), confine_to => rootWindow,
-        --                cursor        => XCB_NONE, time => XCB_CURRENT_TIME);
-        --     else
-        --         -- not holding Alt, just raise
-        --         if focusedWindow /= window then
-        --             Ada.Text_IO.Put_Line ("Focusing window" & window'Image);
-        --             focusedWindow := window;
-        --             dummyCookie   :=
-        --                xcb_set_input_focus
-        --                   (c => connection, revert_to => xcb_input_focus_t'Pos (XCB_INPUT_FOCUS_POINTER_ROOT),
-        --                    focus => window, time => XCB_CURRENT_TIME);
-        --         end if;
-        --     end if;
-        -- else
-        --     -- mouse button 3
-        --     windowAttributes.border_width := 3;
-
-        --     -- if geom /= null then
-        --         -- dummyCookie :=
-        --         --   xcb_warp_pointer(c            => connection, 
-        --         --                    src_window   => XCB_NONE, 
-        --         --                    dst_window   => window,
-        --         --                    src_x        => 0,
-        --         --                    src_y        => 0,
-        --         --                    src_width    => 0, 
-        --         --                    src_height   => 0,
-        --         --                    dst_x        => short (geom.width),
-        --         --                    dst_y        => short (geom.height));
-        --     -- end if;
-            
-        --     dummyGrabCookie :=
-        --        xcb_grab_pointer
-        --           (c          => connection, owner_events => 0, grab_window => rootWindow,
-        --            event_mask =>
-        --               unsigned_short
-        --                  (XCB_EVENT_MASK_BUTTON_RELEASE or XCB_EVENT_MASK_BUTTON_MOTION or
-        --                   XCB_EVENT_MASK_POINTER_MOTION_HINT),
-        --            pointer_mode  => xcb_grab_mode_t'Pos (XCB_GRAB_MODE_ASYNC),
-        --            keyboard_mode => xcb_grab_mode_t'Pos (XCB_GRAB_MODE_ASYNC), confine_to => rootWindow,
-        --            cursor        => XCB_NONE, time => XCB_CURRENT_TIME);
-        --  end if;
- 
-        --  dummy := xcb_flush (connection);
-        --  Ada.Text_IO.Put_Line("exit handleButtonPress");
     end handleButtonPress;
     
     ---------------------------------------------------------------------------
@@ -344,116 +253,69 @@ package body events is
     ---------------------------------------------------------------------------
     procedure handleButtonRelease (connection : access xcb_connection_t; event : eventPtr) is
         type buttonEventPtr is access xcb_button_release_event_t;
+
         buttonEvent : buttonEventPtr;
-        cookie : xcb_void_cookie_t;
-        ignore : int;
+        -- cookie      : xcb_void_cookie_t;
+        ignore      : int;
+
         function toButtonEvent is new Ada.Unchecked_Conversion(Source => eventPtr, Target => buttonEventPtr);
     begin
-        Ada.Text_IO.Put_Line("enter handleButtonRelease");
         buttonEvent := toButtonEvent(event);
-        -- dummyCookie := xcb_ungrab_pointer (connection, XCB_CURRENT_TIME);
-        -- dummy       := xcb_flush (connection);
-        cookie := xcb_allow_events(c => connection,
-                                   mode => xcb_allow_t'Pos(XCB_ALLOW_REPLAY_POINTER),
-                                   time => buttonEvent.time);
 
-        ignore := xcb_flush(connection);
-        --Ada.Text_IO.Put_Line("exit handleButtonRelease");
+        -- cookie := xcb_allow_events(c    => connection,
+        --                            mode => xcb_allow_t'Pos(XCB_ALLOW_REPLAY_POINTER),
+        --                            time => buttonEvent.time);
+        -- If we were dragging, stop.
+        dragFrame := 0;
+
+        ignore := xcb_flush (connection);
     end handleButtonRelease;
 
     ---------------------------------------------------------------------------
     -- handleMotionNotify
     ---------------------------------------------------------------------------
     procedure handleMotionNotify (connection : access xcb_connection_t; event : eventPtr) is
+        use Interfaces.C;
+
         type MotionEventPtr is access all xcb_motion_notify_event_t;
-        function toMotionEvent is new Ada.Unchecked_Conversion(Source => eventPtr, Target => MotionEventPtr);
-        motionEvent : MotionEventPtr := toMotionEvent(event);
-        
-        pointerCookie : xcb_query_pointer_cookie_t;
-        pointer : access xcb_query_pointer_reply_t;
-        
-        geometryCookie : xcb_get_geometry_cookie_t;
-        geometry : access xcb_get_geometry_reply_t;
-        
-        dummy : Interfaces.C.int;
-        dummyCookie : xcb_void_cookie_t;
-        rootWindow : xcb_window_t := setup.getRootWindow(connection);
-        
-        window : xcb_window_t := motionEvent.child;
+        motionEvent : MotionEventPtr;
         
         windowAttributes : aliased xcb_configure_window_value_list_t;
-        
-        screen : access xcb_screen_t := setup.getScreen(connection);
+        cookie : xcb_void_cookie_t;
+        deltaX : Interfaces.C.short;
+        deltaY : Interfaces.C.short;
+        newX   : Interfaces.C.short;
+        newY   : Interfaces.C.short;
+
+        dummy  : Interfaces.C.int;
+
+        -- screen : access xcb_screen_t := setup.getScreen(connection);
+        function toMotionEvent is new Ada.Unchecked_Conversion(Source => eventPtr, Target => MotionEventPtr);
     begin
-        Ada.Text_IO.Put_Line("Motion on window " & window'Image);
+        motionEvent := toMotionEvent(event);
+
+        --Ada.Text_IO.Put_Line ("Root X: " & motionEvent.root_x'Image & " Root Y: " & motionEvent.root_y'Image);
         
-        pointerCookie := xcb_query_pointer (c => connection, window => rootWindow);
-        geometryCookie := xcb_get_geometry (c => connection, drawable => focusedWindow);
+        if dragFrame /= 0 then
+            -- Update window location
+            deltaX := dragStartX - winStartX;
+            deltaY := dragStartY - winStartY;
 
-        pointer := xcb_query_pointer_reply (c => connection, cookie => pointerCookie, e => System.Null_Address);
-        geometry := xcb_get_geometry_reply (c => connection, cookie => geometryCookie, e => System.Null_Address);
+            newX := motionEvent.root_x - deltaX;
+            newY := motionEvent.root_y - deltaY;
 
-        if geometry = null then
-            Ada.Text_IO.Put_Line("Failed to get geometry");
-            return;
+            windowAttributes.x := Interfaces.C.int(newX);
+            windowAttributes.y := Interfaces.C.int(newY);
+
+            cookie := xcb_configure_window_aux (c          => connection,
+                                                window     => dragFrame,
+                                                value_mask => Unsigned_short(XCB_CONFIG_WINDOW_X or XCB_CONFIG_WINDOW_Y),
+                                                value_list => windowAttributes'Access);
         end if;
-        
-        if pointer = null then
-            Ada.Text_IO.Put_Line("Failed to get pointer");
-            return;
-        end if;
- 
-        if geometry.border_width = 1 then
-            -- moving window
-            if unsigned_short (pointer.root_x) > unsigned_short (screen.width_in_pixels - 5) then
-                -- moving to far left
-                windowAttributes.width  := unsigned (screen.width_in_pixels / 2);
-                windowAttributes.x      := 0;
-                windowAttributes.y      := 0; --screen.width_in_pixels / 2;
-                windowAttributes.height := unsigned (screen.height_in_pixels);
-
-                dummyCookie :=
-                   xcb_configure_window_aux
-                      (c          => connection, window => focusedWindow,
-                       value_mask =>
-                          unsigned_short
-                             (XCB_CONFIG_WINDOW_X or XCB_CONFIG_WINDOW_Y or XCB_CONFIG_WINDOW_WIDTH or
-                              XCB_CONFIG_WINDOW_HEIGHT),
-                       value_list => windowAttributes'Access);
-            else
-                -- moving elsewhere
-                windowAttributes.x :=
-                   int
-                      ((if (unsigned_short (pointer.root_x) + geometry.width > screen.width_in_pixels) then
-                           screen.width_in_pixels - geometry.width
-                        else unsigned_short (pointer.root_x)));
-                windowAttributes.y :=
-                   int
-                      ((if (unsigned_short (pointer.root_y) + geometry.height > screen.height_in_pixels) then
-                           screen.height_in_pixels - geometry.height
-                        else unsigned_short (pointer.root_y)));
-
-                dummyCookie :=
-                   xcb_configure_window_aux
-                      (c          => connection, window => focusedWindow,
-                       value_mask => unsigned_short (XCB_CONFIG_WINDOW_X or XCB_CONFIG_WINDOW_Y),
-                       value_list => windowAttributes'Access);
-            end if;
-        else
-            -- resizing window
-            -- TODO: make sure this stays above some minimum
-            windowAttributes.width  := unsigned (pointer.root_x - geometry.x);
-            windowAttributes.height := unsigned (pointer.root_y - geometry.y);
-
-            dummyCookie :=
-               xcb_configure_window_aux
-                  (c          => connection, window => focusedWindow,
-                   value_mask => unsigned_short (XCB_CONFIG_WINDOW_WIDTH or XCB_CONFIG_WINDOW_HEIGHT),
-                   value_list => windowAttributes'Access);
-        end if;
+        -- @TODO consider introducing some hysteresis so small mouse
+        -- movements during a button click don't turn into drags.
 
         dummy := xcb_flush (connection);
-        Ada.Text_IO.Put_Line("exit handleMotionNotify");
     end handleMotionNotify;
 
     ---------------------------------------------------------------------------
@@ -468,7 +330,7 @@ package body events is
         exposeEvent : ExposeEventPtr := toExposeEvent(event);
 
     begin
-        Ada.Text_IO.Put_Line("enter handleExpose");
+        -- Ada.Text_IO.Put_Line("enter handleExpose");
 
         -- If we're exposing a window, expose the frame too (if it has one) and vice versa.
         if isFrame(exposeEvent.window) then
@@ -485,7 +347,7 @@ package body events is
             null;
         end if;
 
-        Ada.Text_IO.Put_Line("exit handleExpose");
+        -- Ada.Text_IO.Put_Line("exit handleExpose");
     end handleExpose;
 
     ---------------------------------------------------------------------------
@@ -526,8 +388,8 @@ package body events is
                      events.handleButtonPress(connection, event);
                 --     null;
             
-                -- when CONST_XCB_MOTION_NOTIFY =>
-                --     events.handleMotionNotify(connection, event);
+                when CONST_XCB_MOTION_NOTIFY =>
+                    events.handleMotionNotify(connection, event);
                 --     null;
     
                 when CONST_XCB_BUTTON_RELEASE =>

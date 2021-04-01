@@ -100,7 +100,7 @@ package body frames is
 
         glErr : GL.GLenum;
     begin
-        Ada.Text_IO.Put_Line("Enter drawTitleBar");
+        -- Ada.Text_IO.Put_Line("Enter drawTitleBar");
 
         if f.surface.kind = render.SOFTWARE then
             cookie := xcb_image_text_8_checked(c          => f.connection,
@@ -143,8 +143,8 @@ package body frames is
 
             GL.glClear (GL.GL_COLOR_BUFFER_BIT);
 
-            glErr := GL.glGetError;
-            Ada.Text_IO.Put_Line ("glClear GL error? " & glErr'Image);
+            -- glErr := GL.glGetError;
+            -- Ada.Text_IO.Put_Line ("glClear GL error? " & glErr'Image);
 
             -- Enable blending
             GL.glEnable (cap => GL.GL_BLEND);
@@ -152,14 +152,14 @@ package body frames is
             GL.glBlendFunc (sfactor => GL.GL_SRC_ALPHA,
                             dfactor => GL.GL_ONE_MINUS_SRC_ALPHA);
             
-            glErr := GL.glGetError;
-            Ada.Text_IO.Put_Line ("glBlendFunc error? " & glErr'Image);
+            -- glErr := GL.glGetError;
+            -- Ada.Text_IO.Put_Line ("glBlendFunc error? " & glErr'Image);
 
             w := Float(f.width);
             h := Float(f.height);
 
-            Ada.Text_IO.Put_Line ("Window Width: " & f.width'Image);
-            Ada.Text_IO.Put_Line ("Window Height: " & f.height'Image);
+            -- Ada.Text_IO.Put_Line ("Window Width: " & f.width'Image);
+            -- Ada.Text_IO.Put_Line ("Window Height: " & f.height'Image);
             -- Ada.Text_IO.Put_Line ("Scaling factor :" & sx'Image & ", " & sy'Image);
             Render.Text.renderGLText (title, x, y, w, h);
 
@@ -199,7 +199,7 @@ package body frames is
             GLX.glxSwapBuffers(rend.display, f.surface.drawable);
         end if;
 
-        Ada.Text_IO.Put_Line("Exit drawTitleBar");
+        -- Ada.Text_IO.Put_Line("Exit drawTitleBar");
     end drawTitleBar;
 
     ---------------------------------------------------------------------------

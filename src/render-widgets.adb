@@ -29,8 +29,8 @@ package body Render.Widgets is
         -- Use our circle shader program
         GLext.glUseProgram (Render.Shaders.circleShaderProg);
         
-        glErr := GL.glGetError;
-        Ada.Text_IO.Put_Line ("drawCircle: glUseProgram error? " & glErr'Image);
+        -- glErr := GL.glGetError;
+        -- Ada.Text_IO.Put_Line ("drawCircle: glUseProgram error? " & glErr'Image);
         
         -- projection
         GLext.glUniformMatrix4fv (location  => Render.Shaders.circleUniformOrtho,
@@ -38,8 +38,8 @@ package body Render.Widgets is
                                   transpose => GL.GL_TRUE,
                                   value     => orthoM(1)'Access);
 
-        glErr := GL.glGetError;
-        Ada.Text_IO.Put_Line ("drawCircle: glUniformMatrix4fv error? " & glErr'Image);
+        -- glErr := GL.glGetError;
+        --Ada.Text_IO.Put_Line ("drawCircle: glUniformMatrix4fv error? " & glErr'Image);
         -- Set up fragment shader
 
         -- Circle color
@@ -49,54 +49,54 @@ package body Render.Widgets is
                            v2       => b,
                            v3       => a);
 
-        glErr := GL.glGetError;
-        Ada.Text_IO.Put_Line ("drawCircle: glUniform4f error? " & glErr'Image);
+        -- glErr := GL.glGetError;
+        --Ada.Text_IO.Put_Line ("drawCircle: glUniform4f error? " & glErr'Image);
 
         -- Not sure if we can re-use the coord from the vertex stage or not
         GLext.glUniform2f (location => Render.Shaders.circleUniformCenter,
                            v0       => x,
                            v1       => y);
 
-        glErr := GL.glGetError;
-        Ada.Text_IO.Put_Line ("drawCircle: glUniform2f error? " & glErr'Image);
+        -- glErr := GL.glGetError;
+        --Ada.Text_IO.Put_Line ("drawCircle: glUniform2f error? " & glErr'Image);
 
         GLext.glUniform1f (location => Render.Shaders.circleUniformScrH,
                            v0       => windowH);
         
-        glErr := GL.glGetError;
-        Ada.Text_IO.Put_Line ("drawCircle: glUniform1f error? " & glErr'Image);
+        -- glErr := GL.glGetError;
+        --Ada.Text_IO.Put_Line ("drawCircle: glUniform1f error? " & glErr'Image);
 
         GLext.glUniform1f (location => Render.Shaders.circleUniformRadius,
                            v0       => radius);
         
-        glErr := GL.glGetError;
-        Ada.Text_IO.Put_Line ("drawCircle: glUniform1f error? " & glErr'Image);
+        -- glErr := GL.glGetError;
+        --Ada.Text_IO.Put_Line ("drawCircle: glUniform1f error? " & glErr'Image);
 
         GL.glViewport (x      => 0,
                        y      => 0,
                        width  => GL.GLsizei(windowW),
                        height => GL.GLsizei(windowH));
         
-        glErr := GL.glGetError;
-        Ada.Text_IO.Put_Line ("drawCircle: glViewport error? " & glErr'Image);
+        -- glErr := GL.glGetError;
+        --Ada.Text_IO.Put_Line ("drawCircle: glViewport error? " & glErr'Image);
 
         -- Set up VBO
         GLext.glGenBuffers (1, Render.Shaders.circleVBO'Access);
 
-        glErr := GL.glGetError;
-        Ada.Text_IO.Put_Line ("drawCircle: glGenBuffers error? " & glErr'Image);
+        -- glErr := GL.glGetError;
+        --Ada.Text_IO.Put_Line ("drawCircle: glGenBuffers error? " & glErr'Image);
 
         -- Set up vertex shader
         GLext.glEnableVertexAttribArray (GL.GLuint(Render.Shaders.circleAttribCoord));
 
-        glErr := GL.glGetError;
-        Ada.Text_IO.Put_Line ("drawCircle: glEnableVertexAttribArray error? " & glErr'Image);
+        -- glErr := GL.glGetError;
+        --Ada.Text_IO.Put_Line ("drawCircle: glEnableVertexAttribArray error? " & glErr'Image);
         
         GLext.glBindBuffer (target => GLext.GL_ARRAY_BUFFER,
                             buffer => Render.Shaders.circleVBO);
 
-        glErr := GL.glGetError;
-        Ada.Text_IO.Put_Line ("drawCircle: glBindBuffer error? " & glErr'Image);
+        -- glErr := GL.glGetError;
+        --Ada.Text_IO.Put_Line ("drawCircle: glBindBuffer error? " & glErr'Image);
 
         -- center of the circle
         GLext.glVertexAttribPointer (index      => GL.GLuint(Render.Shaders.circleAttribCoord),
@@ -106,8 +106,8 @@ package body Render.Widgets is
                                      stride     => 0,
                                      pointer    => System.Null_Address);
 
-        glErr := GL.glGetError;
-        Ada.Text_IO.Put_Line ("drawCircle: glVertexAttrib error? " & glErr'Image);
+        -- glErr := GL.glGetError;
+        --Ada.Text_IO.Put_Line ("drawCircle: glVertexAttrib error? " & glErr'Image);
 
         -- Four corners of the "square" containing our circle (texture coords not used yet)
         circleBox := (
@@ -122,15 +122,15 @@ package body Render.Widgets is
                             data   => circleBox'Address,
                             usage  => GLext.GL_DYNAMIC_DRAW);
 
-        glErr := GL.glGetError;
-        Ada.Text_IO.Put_Line ("drawCircle: glBufferData error? " & glErr'Image);
+        -- glErr := GL.glGetError;
+        --Ada.Text_IO.Put_Line ("drawCircle: glBufferData error? " & glErr'Image);
 
         GL.glDrawArrays (mode  => GL.GL_TRIANGLE_STRIP,
                          first => 0,
                          count => Interfaces.C.int(circleBox'Last));
 
-        glErr := GL.glGetError;
-        Ada.Text_IO.Put_Line ("drawCircle: glDrawArrays error? " & glErr'Image);
+        -- glErr := GL.glGetError;
+        --Ada.Text_IO.Put_Line ("drawCircle: glDrawArrays error? " & glErr'Image);
 
         GLext.glDisableVertexAttribArray (GL.GLuint(Render.Shaders.circleAttribCoord));
         GLext.glDeleteBuffers (1, Render.Shaders.circleVBO'Access);

@@ -3,15 +3,6 @@
 -- up and it can pull whatever inputs it wants.
 package Events.Inputs is
 
-    type InputEvent is (MOUSEMOVEMENT, BUTTONDOWN, BUTTONUP, KEYDOWN, KEYUP, QUIT)
-
-    type MouseMotionT is record
-
-    end record;
-
-    type EventStruct is record
-
-        mouseMotion : MouseMotion
-    end record;
+    type InputEvent is (MOUSEMOVEMENT, BUTTONDOWN, BUTTONUP, KEYDOWN, KEYUP, QUIT);
 
 end Events.Inputs;
