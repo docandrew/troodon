@@ -275,6 +275,8 @@ package body frames is
         f     : Frame;
 
         frameCreateAttributes : aliased xcb_create_window_value_list_t;
+        appAttributes         : aliased xcb_change_window_attributes_value_list_t;
+
         frameValueMask : Interfaces.C.unsigned;
     begin
         -- Get information about app window
@@ -357,6 +359,23 @@ package body frames is
                                 unsigned(Length(title)),
                                 To_String(title)'Address);
         end if;
+
+        -- Grab button presses so we can raise window to the top.
+        cookie := xcb_grab_button (c             => connection,
+                                   owner_events  => 0,
+                                   grab_window   => window, 
+                                   event_mask    => unsigned_short(XCB_EVENT_MASK_BUTTON_PRESS), 
+                                   pointer_mode  => unsigned_char(xcb_grab_mode_t'Pos(XCB_GRAB_MODE_SYNC)),
+                                   keyboard_mode => unsigned_char(xcb_grab_mode_t'Pos(XCB_GRAB_MODE_ASYNC)),
+                                   confine_to    => XCB_NONE,
+                                   cursor        => XCB_NONE,
+                                   button        => 1,
+                                   modifiers     => unsigned_short(XCB_MOD_MASK_ANY));
+        -- appAttributes.event_mask := XCB_EVENT_MASK_BUTTON_PRESS;
+        -- cookie := xcb_change_window_attributes_aux (c           => connection,
+        --                                             window      => window,
+        --                                             value_mask  => XCB_CW_EVENT_MASK,
+        --                                             value_list  => appAttributes'Access);
 
         cookie := xcb_reparent_window (c      => connection, 
                                        window => window,

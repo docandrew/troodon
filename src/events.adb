@@ -20,7 +20,7 @@ with Util; use Util;
 
 package body events is
 
-    focusedWindow   : xcb_window_t;
+    focusWin        : xcb_window_t := 0;
 
     -- Window movement & resizing.
     -- need both the original window pos
@@ -182,7 +182,6 @@ package body events is
         buttonEvent : buttonEventPtr;
         cookie      : xcb_void_cookie_t;
         ignore      : Interfaces.C.int;
-        focusWin    : xcb_window_t;
         geom        : access xcb_get_geometry_reply_t;
 
         function toButtonEvent is new Ada.Unchecked_Conversion (Source => events.eventPtr, Target => buttonEventPtr);
@@ -211,8 +210,19 @@ package body events is
                               " on window"   & buttonEvent.event'Image &
                               " on child"    & buttonEvent.child'Image);
 
-        -- Whether its a frame or not, we can raiseToTop
-        raiseToTop (connection, buttonEvent.event);
+        -- Re-grab the previously-focused window.
+        if focusWin /= 0 then
+            cookie := xcb_grab_button (c             => connection,
+                                        owner_events  => 0,
+                                        grab_window   => focusWin, 
+                                        event_mask    => unsigned_short(XCB_EVENT_MASK_BUTTON_PRESS), 
+                                        pointer_mode  => unsigned_char(xcb_grab_mode_t'Pos(XCB_GRAB_MODE_SYNC)),
+                                        keyboard_mode => unsigned_char(xcb_grab_mode_t'Pos(XCB_GRAB_MODE_ASYNC)),
+                                        confine_to    => XCB_NONE,
+                                        cursor        => XCB_NONE,
+                                        button        => 1,
+                                        modifiers     => unsigned_short(XCB_MOD_MASK_ANY));                
+        end if;
 
         if isFrame (buttonEvent.event) then
             -- Clicked on a frame. Register the start pos in case this turns into a drag.
@@ -231,21 +241,41 @@ package body events is
                 winStartY := geom.y;
             end if;
 
+            -- Focus the app.
+            raiseToTop (connection, buttonEvent.event);
             focusWin := getFrameFromList(buttonEvent.event).appWindow;
+
             Ada.Text_IO.Put_Line ("Clicked on frame, focusing " & focusWin'Image);
+
         elsif hasFrame (buttonEvent.event) then
-            -- Focus the window, but let the app decide how to deal with the event.
+            -- Clicked on app. Focus it.
             focusWin := buttonEvent.event;
+            raiseToTop (connection, getFrameOfWindow (focusWin).frameID);
+
+            -- Now that we focused it, we can ungrab the pointer to allow normal
+            -- processing.
+            cookie := xcb_ungrab_button (c           => connection,
+                                         button      => 1,
+                                         grab_window => focusWin,
+                                         modifiers   => unsigned_short(XCB_MOD_MASK_ANY));
+
+            cookie := xcb_allow_events (c    => connection,
+                                        mode => unsigned_char(xcb_allow_t'Pos(XCB_ALLOW_REPLAY_POINTER)),
+                                        time => XCB_CURRENT_TIME);
+
             Ada.Text_IO.Put_Line ("Clicked on app, focusing " & focusWin'Image);
         else
             -- Clicked on a non-framed window. 
             focusWin := buttonEvent.event;
         end if;
         
+        -- Whatever we focused should have the input focus now too.
         cookie := xcb_set_input_focus(c           => connection,
                                       revert_to   => xcb_input_focus_t'Pos(XCB_INPUT_FOCUS_POINTER_ROOT),
                                       focus       => focusWin,
                                       time        => XCB_CURRENT_TIME);
+
+        ignore := xcb_flush (connection);
     end handleButtonPress;
     
     ---------------------------------------------------------------------------
@@ -364,9 +394,8 @@ package body events is
     begin
         ignore := xcb_flush(connection);
 
-        focusedWindow := setup.getRootWindow(connection);
-        
-        Ada.Text_IO.Put_Line("Focused Window:" & focusedWindow'Image);
+        --focusWin := setup.getRootWindow(connection);
+        --Ada.Text_IO.Put_Line("Focused Window:" & focusedWindow'Image);
         
         loop
             --Ada.Text_IO.Put_Line("Start Event Loop");
