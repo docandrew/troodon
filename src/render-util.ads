@@ -20,7 +20,8 @@ package Render.Util is
         y : GL.GLfloat;
     end record;
 
-    type Box2D is array (Natural range 1..4) of Point2D with Convention => C;
+    type Line2D is array (Natural range 1..2) of Point2D with Convention => C;
+    type Box2D  is array (Natural range 1..4) of Point2D with Convention => C;
 
     -- Can pass these to GL functions with myvec(1)'Access
     type Vec2 is array (Natural range 1..2) of aliased GL.GLfloat with Convention => C;

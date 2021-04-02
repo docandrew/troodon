@@ -139,21 +139,90 @@ package body Render.Widgets is
 
     ---------------------------------------------------------------------------
     -- drawLine
+    -- @TODO - might be a good idea to bundle up all these draw calls, esp. if
+    -- a bunch of lines are being drawn.
     ---------------------------------------------------------------------------
     procedure drawLine (fromX     : Float;
                         fromY     : Float;
                         toX       : Float;
                         toY       : Float;
-                        thickness : Float;
+                        width     : Float;
                         r         : Float;
                         g         : Float;
                         b         : Float;
                         a         : Float;
                         windowW   : Float;
                         windowH   : Float) is
+
+        glErr  : GL.GLuint;
+        line   : Render.Util.Line2D := (1 => (fromX, fromY), 2 => (toX, toY));
+        orthoM : Render.Util.Mat4 := Render.Util.ortho (0.0, windowW, windowH, 0.0, -1.0, 1.0);
     begin
-        --@TODO finish this.
-        null;
+        GLext.glUseProgram (Render.Shaders.lineShaderProg);
+        
+        -- need to set line width for fragment shader to work
+        GL.glLineWidth (width);
+
+        -- projection
+        GLext.glUniformMatrix4fv (location  => Render.Shaders.lineUniformOrtho,
+                                  count     => 1,
+                                  transpose => GL.GL_TRUE,
+                                  value     => orthoM(1)'Access);
+
+        GLext.glUniform2f (location => Render.Shaders.lineUniformFrom,
+                           v0       => fromX,
+                           v1       => fromY);
+
+        GLext.glUniform2f (location => Render.Shaders.lineUniformTo,
+                           v0       => toX,
+                           v1       => toY);
+
+        GLext.glUniform1f (location => Render.Shaders.lineUniformWidth,
+                           v0       => width);
+        
+        GLext.glUniform4f (location => Render.Shaders.lineUniformColor,
+                           v0       => r,
+                           v1       => g,
+                           v2       => b,
+                           v3       => a);
+        
+        GL.glViewport (x      => 0,
+                       y      => 0,
+                       width  => GL.GLsizei(windowW),
+                       height => GL.GLsizei(windowH));
+        
+        -- Set up VBO
+        GLext.glGenBuffers (1, Render.Shaders.lineVBO'Access);
+
+        -- Set up vertex shader
+        GLext.glEnableVertexAttribArray (GL.GLuint(Render.Shaders.lineAttribCoord));
+
+        GLext.glBindBuffer (target => GLext.GL_ARRAY_BUFFER,
+                            buffer => Render.Shaders.lineVBO);
+
+        -- Pass 2-D coords for the line segment.
+        GLext.glVertexAttribPointer (index      => GL.GLuint(Render.Shaders.lineAttribCoord),
+                                     size       => 2,
+                                     c_type     => GL.GL_FLOAT,
+                                     normalized => GL.GL_FALSE,
+                                     stride     => 0,
+                                     pointer    => System.Null_Address);
+
+        -- Four corners of the "square" containing our circle (texture coords not used yet)
+        --Ada.Text_IO.Put_Line ("Drawing line from (" & fromX'Image & "," & fromY'Image & ") to (" & toX'Image & "," & toY'Image & ")");
+
+        GLext.glBufferData (target => GLext.GL_ARRAY_BUFFER,
+                            size   => line'Size / 8,
+                            data   => line'Address,
+                            usage  => GLext.GL_DYNAMIC_DRAW);
+
+        GL.glDrawArrays (mode  => GL.GL_LINES,
+                         first => 0,
+                         count => Interfaces.C.int(line'Last));
+
+        GLext.glDisableVertexAttribArray (GL.GLuint(Render.Shaders.lineAttribCoord));
+        GLext.glDeleteBuffers (1, Render.Shaders.lineVBO'Access);
+        GLext.glUseProgram (0);
     end drawLine;
 
 end Render.Widgets;

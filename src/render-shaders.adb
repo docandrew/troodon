@@ -12,7 +12,7 @@ with Render;
 
 package body Render.Shaders is
 
-    type Symbol is (USELESS);
+    type Symbol is (USELESS) with Size => 64;
 
     ---------------------------------------------------------------------------
     -- printShaderErrors
@@ -192,10 +192,10 @@ package body Render.Shaders is
         -- Ada.Text_IO.Put_Line ("text frag shader size: " & textFragmentShaderSize'Image);
         -- Ada.Text_IO.Put_Line ("text frag shader addr: " & System.Address_Image(text_fragment_shader_start'Address));
 
-        textShaderProg := createShaderProgram(vertSource => text_vertex_shader_start'Address,
-                                              vertSize   => textVertexShaderSize,
-                                              fragSource => text_fragment_shader_start'Address,
-                                              fragSize   => textFragmentShaderSize);
+        textShaderProg := createShaderProgram (vertSource => text_vertex_shader_start'Address,
+                                               vertSize   => textVertexShaderSize,
+                                               fragSource => text_fragment_shader_start'Address,
+                                               fragSize   => textFragmentShaderSize);
         if textShaderProg = 0 then
             raise ShaderException with "Unable to load text shaders";
         end if;
@@ -246,10 +246,10 @@ package body Render.Shaders is
             Import, Address => circle_fragment_shader_size'Address;
 
     begin
-        circleShaderProg := createShaderProgram(vertSource => circle_vertex_shader_start'Address,
-                                                vertSize   => circleVertexShaderSize,
-                                                fragSource => circle_fragment_shader_start'Address,
-                                                fragSize   => circleFragmentShaderSize);
+        circleShaderProg := createShaderProgram (vertSource => circle_vertex_shader_start'Address,
+                                                 vertSize   => circleVertexShaderSize,
+                                                 fragSource => circle_fragment_shader_start'Address,
+                                                 fragSize   => circleFragmentShaderSize);
 
         if circleShaderProg = 0 then
             raise ShaderException with "Unable to load circle shaders";
@@ -282,6 +282,61 @@ package body Render.Shaders is
     end initCircleShaders;
 
     ---------------------------------------------------------------------------
+    -- initLineShaders
+    ---------------------------------------------------------------------------
+    procedure initLineShaders is
+
+        line_vertex_shader_start : Symbol with Import;
+        line_vertex_shader_end   : Symbol with Import;
+        line_vertex_shader_size  : Symbol with Import;
+
+        lineVertexShaderSize : Interfaces.C.size_t with
+            Import, Address => line_vertex_shader_size'Address;
+
+        line_fragment_shader_start : Symbol with Import;
+        line_fragment_shader_end   : Symbol with Import;
+        line_fragment_shader_size  : Symbol with Import;
+
+        lineFragmentShaderSize : Interfaces.C.size_t with
+            Import, Address => line_fragment_shader_size'Address;
+    begin
+
+        lineShaderProg := createShaderProgram (vertSource => line_vertex_shader_start'Address,
+                                               vertSize   => lineVertexShaderSize,
+                                               fragSource => line_fragment_shader_start'Address,
+                                               fragSize   => lineFragmentShaderSize);
+
+        if lineShaderProg = 0 then
+            raise ShaderException with "Unable to load line shaders";
+        end if;
+
+        Ada.Text_IO.Put_Line("Troodon: Loaded Line Shaders");
+
+        lineAttribCoord  := GLext.glGetAttribLocation  (program => lineShaderProg,
+                                                        name    => Interfaces.C.To_C ("coord"));
+        lineUniformOrtho := GLext.glGetUniformLocation (program => lineShaderProg,
+                                                        name    => Interfaces.C.To_C ("ortho"));
+        lineUniformFrom  := GLext.glGetUniformLocation (program => lineShaderProg,
+                                                        name    => Interfaces.C.To_C ("lineFrom"));
+        lineUniformTo    := GLext.glGetUniformLocation (program => lineShaderProg,
+                                                        name    => Interfaces.C.To_C ("lineTo"));
+        lineUniformWidth := GLext.glGetUniformLocation (program => lineShaderProg,
+                                                        name    => Interfaces.C.To_C ("width"));
+        lineUniformColor := GLext.glGetUniformLocation (program => lineShaderProg,
+                                                        name    => Interfaces.C.To_C ("color"));
+
+        if lineAttribCoord  = -1 or
+           lineUniformOrtho = -1 or
+           lineUniformFrom  = -1 or
+           lineUniformTo    = -1 or
+           lineUniformWidth = -1 or
+           lineUniformColor = -1 then
+            raise ShaderException with "Unable to get shader variables from line program.";
+        end if;
+
+    end initLineShaders;
+
+    ---------------------------------------------------------------------------
     -- initShaders
     -- Load, compile and link the shaders used for OpenGL rendering
     ---------------------------------------------------------------------------
@@ -289,12 +344,14 @@ package body Render.Shaders is
     begin
         initTextShaders;
         initCircleShaders;
+        initLineShaders;
     end initShaders;
 
     procedure teardownShaders is
     begin
         GLext.glDeleteProgram (textShaderProg);
         GLext.glDeleteProgram (circleShaderProg);
+        GLext.glDeleteProgram (lineShaderProg);
     end teardownShaders;
 
 end Render.Shaders;

@@ -143,7 +143,7 @@ package body events is
 
         function toConfigureEvent is new Ada.Unchecked_Conversion (Source => eventPtr, Target => configureRequestPtr);
     begin
-        Ada.Text_IO.Put_Line("enter handleConfigurationRequest");
+        -- Ada.Text_IO.Put_Line("enter handleConfigurationRequest");
         configureRequestEvent := toConfigureEvent (event);
 
         -- @TODO, see if a frame is being configured, and if so, make sure we update
@@ -164,7 +164,7 @@ package body events is
                                     value_mask  => configureRequestEvent.value_mask,
                                     value_list  => windowAttributes'Access);
 
-        Ada.Text_IO.Put_Line ("Configuring window" & configureRequestEvent.window'Image);
+        -- Ada.Text_IO.Put_Line ("Configuring window" & configureRequestEvent.window'Image);
 
         dummy := xcb_flush (connection);
         Ada.Text_IO.Put_Line("exit handleConfigurationRequest");
@@ -191,10 +191,10 @@ package body events is
         
         buttonEvent := toButtonEvent (event);
 
-        Ada.Text_IO.Put_Line ("Button press" & buttonEvent.detail'Image &
-                              " Modifier"    & buttonEvent.state'Image &
-                              " on window"   & buttonEvent.event'Image &
-                              " on child"    & buttonEvent.child'Image);
+        -- Ada.Text_IO.Put_Line ("Button press" & buttonEvent.detail'Image &
+        --                       " Modifier"    & buttonEvent.state'Image &
+        --                       " on window"   & buttonEvent.event'Image &
+        --                       " on child"    & buttonEvent.child'Image);
 
         if isFrame (buttonEvent.event) then
             f := getFrameFromList(buttonEvent.event); -- COPY?
@@ -216,7 +216,7 @@ package body events is
             -- Focus this frame.
             Frames.focus (f.frameID);
 
-            Ada.Text_IO.Put_Line ("Clicked on frame, focusing " & f.frameID'Image);
+            -- Ada.Text_IO.Put_Line ("Clicked on frame, focusing " & f.frameID'Image);
 
         elsif hasFrame (buttonEvent.event) then
             -- Clicked on app. Focus it.
@@ -224,7 +224,7 @@ package body events is
             f := getFrameOfWindow (buttonEvent.event);
             Frames.focus (f.frameID);
 
-            Ada.Text_IO.Put_Line ("Clicked on app, focusing " & f.frameID'Image);
+            -- Ada.Text_IO.Put_Line ("Clicked on app, focusing " & f.frameID'Image);
         else
             -- Clicked on a non-framed window, unfocus all our frames
             Frames.unfocusAll;
@@ -305,7 +305,7 @@ package body events is
     ---------------------------------------------------------------------------
     procedure handleExpose(connection : access xcb_connection_t;
                            event : eventPtr) is
-        use frames;
+        use Frames;
 
         type ExposeEventPtr is access all xcb_expose_event_t;
         function toExposeEvent is new Ada.Unchecked_Conversion(Source => eventPtr, Target => ExposeEventPtr);

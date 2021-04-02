@@ -5,7 +5,7 @@ package Render.Shaders is
     ShaderException : Exception;
 
     ---------------------------------------------------------------------------
-    -- Shader Variables
+    -- Shader Variables. Consider moving these into their own record types
     ---------------------------------------------------------------------------
 
     -- Text shader
@@ -29,6 +29,18 @@ package Render.Shaders is
     circleUniformOrtho  : GL.GLint;
     circleUniformScrH   : GL.GLint;
     circleVBO           : aliased GL.GLuint;
+
+    -- Line shader
+    lineShaderProg      : GL.GLuint := 0;
+
+    lineAttribCoord     : GL.GLint;
+    
+    lineUniformOrtho    : GL.GLint;
+    lineUniformFrom     : GL.GLint;
+    lineUniformTo       : GL.GLint;
+    lineUniformWidth    : GL.GLint;
+    lineUniformColor    : GL.GLint;
+    lineVBO             : aliased GL.GLuint;
 
     ---------------------------------------------------------------------------
     -- Part of Troodon's philosophy is being distributed as a single

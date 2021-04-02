@@ -24,11 +24,9 @@ void main()
     // Distance from center of circle
     float dist = sqrt(x * x + y * y);
 
-    // gl_FragColor = color;
     if (dist > radius)
     {
         discard;
-        //gl_FragColor = vec4(0.5, 0.5, 0.5, 1.0);
     }
     else
     {
@@ -37,6 +35,7 @@ void main()
         // As we near the edge of the circle, increase transparency to make smooth edges.
         float delta = 2.0;
         float alpha = smoothstep(radius - delta, radius, dist);
-        gl_FragColor = vec4(color.r, color.g, color.b, 1.0 - alpha);
+
+        gl_FragColor = vec4(color.rgb, 1.0 - alpha);
     }
 }

@@ -132,6 +132,9 @@ package body Frames is
             -- If we haven't loaded the shader program, do that now.
             -- We can't do this until we have a current context, which we don't have until we
             --  have a drawable window.
+            --
+            -- @TODO create a background window and then use that to create the context
+            -- and init shaders.
             if Render.Shaders.textShaderProg = 0 then
                 Render.Shaders.initShaders;
             end if;
@@ -204,6 +207,19 @@ package body Frames is
                                        a        => BUTTON_MINIMIZE_COLOR_ACTIVE.a,
                                        windowW  => w,
                                        windowH  => h);
+
+            -- Draw an X on the close button
+            Render.Widgets.drawLine (fromX    => 0.0,
+                                     fromY    => 0.0,
+                                     toX      => w,
+                                     toY      => h,
+                                     width    => 5.0,
+                                     r        => 0.0,
+                                     g        => 0.0,
+                                     b        => 0.0,
+                                     a        => 1.0,
+                                     windowW  => w,
+                                     windowH  => h);
 
             GLX.glxSwapBuffers(rend.display, f.surface.drawable);
         end if;
