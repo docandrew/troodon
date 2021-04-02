@@ -36,7 +36,7 @@ project Troodon is
    end Binder;
 
    package Compiler is
-      for Switches ("ada") use ("-gnat12", "-gnateE", "-g", "-gnato", "-fstack-check", "-gnatE");
+      for Switches ("ada") use ("-gnat12", "-gnatf", "-gnateE", "-g", "-gnato", "-fstack-check", "-gnatE");
    
       for Driver ("yasm") use "yasm";
       for Object_File_Suffix ("yasm") use ".o";

@@ -174,14 +174,19 @@ package body util is
                                error      : out errorPtr) return xcb_get_geometry_reply_t is
         type geomPtr is access all xcb_get_geometry_reply_t;
         geom : geomPtr;
-        ret : xcb_get_geometry_reply_t;
+        -- @TODO consider using the response_type field as a marker if this call was successful or not.
+        ret : xcb_get_geometry_reply_t := (x      => 0,
+                                           y      => 0,
+                                           width  => 0,
+                                           height => 0,
+                                           others => <>);
         
         procedure free is new Ada.Unchecked_Deallocation (Object => xcb_get_geometry_reply_t, Name => geomPtr);
     begin
         -- consider checking this
-        Ada.Text_IO.Put_Line("getting geometry for" & window'Image);
+        -- Ada.Text_IO.Put_Line("getting geometry for" & window'Image);
         geom := xcb_get_geometry_reply (connection, xcb_get_geometry (connection, window), error'Address);
-        ret := xcb_get_geometry_reply_t(geom.all);
+        ret := xcb_get_geometry_reply_t (geom.all);
         free(geom);
 
         return ret;
@@ -191,10 +196,10 @@ package body util is
     -- getWindowGeometry
     --  convenience function for getting a geometry struct
     ---------------------------------------------------------------------------
-    function getWindowGeometry(connection : access xcb_connection_t;
-                               window     : xcb_window_t) return xcb_get_geometry_reply_t is
+    function getWindowGeometry (connection : access xcb_connection_t;
+                                window     : xcb_window_t) return xcb_get_geometry_reply_t is
         dummyError : errorPtr;
     begin
-        return getWindowGeometry(connection, window, dummyError);
+        return getWindowGeometry (connection, window, dummyError);
     end getWindowGeometry;
 end util;

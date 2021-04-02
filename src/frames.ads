@@ -23,6 +23,10 @@ package frames is
     -- @field appWindow is the application window this frame is framing
     -- @field surface is the rendering surface used for this particular
     --   frame given a specific rendering backend.
+    -- @field focused is True when the corresponding application has input
+    --  focus and this Frame is raised to top.
+    -- @field grabbed is True when this frame is set to grab inputs from its
+    --  child app.
     ---------------------------------------------------------------------------
     type Frame is tagged record
         connection  : access xcb.xcb_connection_t;
@@ -33,6 +37,9 @@ package frames is
         title       : Unbounded_String;
         width       : Natural;
         height      : Natural;
+
+        focused     : Boolean;
+        grabbed     : Boolean;
     end record;
 
     ---------------------------------------------------------------------------
@@ -40,55 +47,58 @@ package frames is
     -- Call xcb_window_map on the frame and its application, causing it to
     -- be displayed.
     ---------------------------------------------------------------------------
-    procedure map(f : Frame);
+    procedure map (f : Frame);
 
     ---------------------------------------------------------------------------
-    -- drawTitleBar
+    -- draw
     -- Draw the frame and associated decorations for this frame
     ---------------------------------------------------------------------------
-    procedure drawTitleBar (f : Frame);
+    procedure draw (f : Frame);
 
     ---------------------------------------------------------------------------
     -- Create a new frame for an application window, and add that frame to the
     -- frame map.
     ---------------------------------------------------------------------------
-    function frameWindow(connection : access xcb.xcb_connection_t;
-                         window     : xproto.xcb_window_t;
-                         rend       : render.Renderer) return Frame;
+    function frameWindow (connection : access xcb.xcb_connection_t;
+                          window     : xproto.xcb_window_t;
+                          rend       : render.Renderer) return Frame;
 
     ---------------------------------------------------------------------------
     -- Destroy the frame of an application window, deleting any resources it
     -- was using and removing it from the list of frames.
     ---------------------------------------------------------------------------
-    procedure unFrameWindow(f : Frame);
+    procedure unFrameWindow (f : Frame);
 
     ---------------------------------------------------------------------------
-    -- exists
-    -- If a frame with X11 ID frameID exists already in our map of frames,
-    -- return True, otherwise False.
+    -- focus
+    -- Focus the Frame with a given FrameID
     ---------------------------------------------------------------------------
-    -- function exists(connection : access xproto.xcb_connection_t;
-    --                 frameID : xproto.xcb_window_t) return Boolean);
+    procedure focus (frameID : xproto.xcb_window_t);
 
+    ---------------------------------------------------------------------------
+    -- unfocusAll
+    -- Make sure none of our frames are focused
+    ---------------------------------------------------------------------------
+    procedure unfocusAll;
 
     ---------------------------------------------------------------------------
     -- isFrame
     -- given a X11 window ID, if this ID is a window that corresponds to a
     -- Troodon frame, return True.
     ---------------------------------------------------------------------------
-    function isFrame(frameID : xproto.xcb_window_t) return Boolean;
+    function isFrame (frameID : xproto.xcb_window_t) return Boolean;
 
     ---------------------------------------------------------------------------
     -- getFrameFromList
     -- given a frameID that exists in the frames map, return it
     ---------------------------------------------------------------------------
-    function getFrameFromList(frameID : xproto.xcb_window_t) return Frame;
+    function getFrameFromList (frameID : xproto.xcb_window_t) return Frame;
 
     ---------------------------------------------------------------------------
     -- hasFrame
     -- given a window ID, if it has been framed already, return True.
     ---------------------------------------------------------------------------
-    function hasFrame(windowID : xproto.xcb_window_t) return Boolean;
+    function hasFrame (windowID : xproto.xcb_window_t) return Boolean;
 
     ---------------------------------------------------------------------------
     -- getWindowFrame
@@ -96,13 +106,11 @@ package frames is
     -- It is important to ensure that the window ID
     -- isn't already a frame, or it will be doubly-framed (see getFrameFromList)
     ---------------------------------------------------------------------------
-    function getFrameOfWindow(windowID : xproto.xcb_window_t) return Frame;
+    function getFrameOfWindow (windowID : xproto.xcb_window_t) return Frame;
+
 
     -- Map each application window to its frame.
-    function hashFunc(Key : xproto.xcb_window_t) return Ada.Containers.Hash_Type;
-
-    -- function "="(Left : xproto.xcb_window_t;
-    --              Right : xproto.xcb_window_t) return Boolean;
+    function hashFunc (Key : xproto.xcb_window_t) return Ada.Containers.Hash_Type;
 
     package FrameMap is new 
         Ada.Containers.Indefinite_Hashed_Maps (Key_Type        => xproto.xcb_window_t,
@@ -112,5 +120,4 @@ package frames is
 
     -- Map of application window ID's to Frame objects
     allFrames : FrameMap.Map;
-    --allFrameIDs : FrameSet.Set;
 end frames;

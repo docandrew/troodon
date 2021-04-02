@@ -1,3 +1,5 @@
+with Ada.Containers.Indefinite_Hashed_Maps;
+with Ada.Containers; use Ada.Containers;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Ada.Text_IO;
 with Interfaces; use Interfaces;
@@ -20,12 +22,14 @@ with Render.Widgets;
 with Setup;
 with Util;
 
-package body frames is
+package body Frames is
 
     package RUtil renames Render.Util;
 
-    FRAME_BG            : constant := 16#1F2430_FF#;
-    FRAME_BORDER        : constant := 16#101521_FF#;
+    FRAME_BG             : constant := 16#1F2430_FF#;
+    FRAME_BG_FOCUSED     : constant := 16#707A8C_FF#;
+    FRAME_BORDER         : constant := 16#101521_FF#;
+    FRAME_BORDER_FOCUSED : constant := 16#707A8C_FF#;
 
     FRAME_BORDER_WIDTH  : constant := 4;
     BUTTON_RADIUS       : constant := 10;
@@ -41,8 +45,10 @@ package body frames is
     BUTTON_MINIMIZE_COLOR_ACTIVE   : RUtil.DecorationColor := RUtil.rgbaToGLColor (16#FFD580_FF#);
     BUTTON_MINIMIZE_COLOR_INACTIVE : RUtil.DecorationColor := RUtil.rgbaToGLColor (16#707A7C_FF#);
 
-    FRAME_BG_GL     : RUtil.DecorationColor := RUtil.rgbaToGLColor (FRAME_BG);
-    FRAME_BORDER_GL : RUtil.DecorationColor := RUtil.rgbaToGLColor (FRAME_BORDER);
+    FRAME_BG_GL                    : RUtil.DecorationColor := RUtil.rgbaToGLColor (FRAME_BG);
+    FRAME_BG_GL_FOCUSED            : RUtil.DecorationColor := RUtil.rgbaToGLColor (FRAME_BG_FOCUSED);
+    FRAME_BORDER_GL                : RUtil.DecorationColor := RUtil.rgbaToGLColor (FRAME_BORDER);
+    FRAME_BORDER_GL_FOCUSED        : RUtil.DecorationColor := RUtil.rgbaToGLColor (FRAME_BORDER_FOCUSED);
 
     ---------------------------------------------------------------------------
     -- hashFunc
@@ -57,7 +63,8 @@ package body frames is
 
     ---------------------------------------------------------------------------
     -- map
-    -- Call xcb_map_window on this frame's window and child if appropriate
+    -- Call xcb_map_window on this frame's window and child if appropriate.
+    -- Go ahead and give the newly-mapped window the focus as well.
     ---------------------------------------------------------------------------
     procedure map(f : Frame) is
         cookie : xcb.xcb_void_cookie_t;
@@ -67,16 +74,15 @@ package body frames is
 
         cookie := xcb_map_window (c      => f.connection,
                                   window => f.appWindow);
+
+        focus(f.frameID);
     end map;
 
     ---------------------------------------------------------------------------
-    -- drawTitleBar
-    -- @TODO generalize this to "drawFrame" or something
-    -- @TODO see if there's a better way of loading the font in advance
-    -- @TODO consider blitting this to a pixmap ahead of time to avoid font
-    --  rendering overhead.
+    -- draw
+    -- Render the decorations, buttons, etc. for this frame.
     ---------------------------------------------------------------------------
-    procedure drawTitleBar (f : Frame) is
+    procedure draw (f : Frame) is
         use render;
 
         cookie : xcb.xcb_void_cookie_t;
@@ -130,16 +136,19 @@ package body frames is
                 Render.Shaders.initShaders;
             end if;
 
-            -- if title = "xterm" then
-            GL.glClearColor (red   => FRAME_BG_GL.r,
-                             green => FRAME_BG_GL.g,
-                             blue  => FRAME_BG_GL.b,
-                             alpha => FRAME_BG_GL.a);
-            -- elsif title = "xeyes" then
-            --     GL.glClearColor (0.2, 0.2, 0.9, 1.0);
-            -- else
-            --     GL.glClearColor (0.9, 0.2, 0.2, 1.0);
-            -- end if;
+            if f.focused then
+                --Ada.Text_IO.Put_Line ("Drawing focused window");
+                GL.glClearColor (red   => FRAME_BG_GL_FOCUSED.r,
+                                 green => FRAME_BG_GL_FOCUSED.g,
+                                 blue  => FRAME_BG_GL_FOCUSED.b,
+                                 alpha => FRAME_BG_GL_FOCUSED.a);
+            else
+                --Ada.Text_IO.Put_Line ("Drawing un-focused window");
+                GL.glClearColor (red   => FRAME_BG_GL.r,
+                                 green => FRAME_BG_GL.g,
+                                 blue  => FRAME_BG_GL.b,
+                                 alpha => FRAME_BG_GL.a);
+            end if;
 
             GL.glClear (GL.GL_COLOR_BUFFER_BIT);
 
@@ -200,13 +209,13 @@ package body frames is
         end if;
 
         -- Ada.Text_IO.Put_Line("Exit drawTitleBar");
-    end drawTitleBar;
+    end draw;
 
     ---------------------------------------------------------------------------
     -- createOpenGLSurface
     ---------------------------------------------------------------------------
-    function createOpenGLSurface(f : Frame;
-                                 rend : render.Renderer) return render.RenderingSurface
+    function createOpenGLSurface (f    : Frame;
+                                  rend : render.Renderer) return render.RenderingSurface
     is
         glxWindow : GLX.GLXWindow;
         drawable  : GLX.GLXDrawable;
@@ -228,8 +237,8 @@ package body frames is
     ---------------------------------------------------------------------------
     -- createSoftwareSurface
     ---------------------------------------------------------------------------
-    function createSoftwareSurface(f : Frame;
-                                   rend : render.Renderer) return render.RenderingSurface
+    function createSoftwareSurface (f    : Frame;
+                                    rend : render.Renderer) return render.RenderingSurface
     is
         use xcb;
         use xproto;
@@ -259,9 +268,9 @@ package body frames is
     ---------------------------------------------------------------------------
     -- frameWindow
     ---------------------------------------------------------------------------
-    function frameWindow(connection : access xcb.xcb_connection_t;
-                         window     : xproto.xcb_window_t;
-                         rend       : render.Renderer) return Frame is
+    function frameWindow (connection : access xcb.xcb_connection_t;
+                          window     : xproto.xcb_window_t;
+                          rend       : render.Renderer) return Frame is
         use xcb;
         use xproto;
         use render;
@@ -280,7 +289,7 @@ package body frames is
         frameValueMask : Interfaces.C.unsigned;
     begin
         -- Get information about app window
-        geom   := util.getWindowGeometry(connection, window);
+        geom   := Util.getWindowGeometry (connection, window);
 
         -- get the first screen
         screen := xcb_setup_roots_iterator (xcb_get_setup (connection)).data;
@@ -290,15 +299,15 @@ package body frames is
 
         -- See what name the app is trying to use. Try these until we find one.
         if setup.ewmh /= null then
-            title := util.getStringProperty(connection, window, setup.ewmh.u_NET_WM_NAME);
+            title := Util.getStringProperty (connection, window, setup.ewmh.u_NET_WM_NAME);
         end if;
 
         if Length(title) = 0 then
-            title := util.getStringProperty(connection, window, XCB_ATOM_WM_NAME);
+            title := Util.getStringProperty (connection, window, XCB_ATOM_WM_NAME);
         end if;
 
         if Length(title) = 0 then
-            title := util.getStringProperty(connection, window, XCB_ATOM_WM_COMMAND);
+            title := Util.getStringProperty (connection, window, XCB_ATOM_WM_COMMAND);
         end if;
 
         -- Setup frame attributes here. If we're using OpenGL then the background pixel
@@ -323,41 +332,41 @@ package body frames is
 
         -- Create actual frame window
         cookie :=
-           xcb_create_window_aux(c              => connection, 
-                                 depth          => XCB_COPY_FROM_PARENT, 
-                                 wid            => f.frameID,
-                                 parent         => screen.root, 
-                                 x              => geom.x,
-                                 y              => geom.y,
-                                 width          => unsigned_short(f.width),
-                                 height         => unsigned_short(f.height),
-                                 border_width   => 0,   -- @TODO for development. We'll draw our own frames later.
-                                 u_class        => xcb_window_class_t'Pos (XCB_WINDOW_CLASS_INPUT_OUTPUT), 
-                                 visual         => rend.visualID,
-                                 value_mask     => frameValueMask,
-                                 value_list     => frameCreateAttributes'Access);
+           xcb_create_window_aux (c            => connection, 
+                                  depth        => XCB_COPY_FROM_PARENT, 
+                                  wid          => f.frameID,
+                                  parent       => screen.root, 
+                                  x            => geom.x,
+                                  y            => geom.y,
+                                  width        => unsigned_short(f.width),
+                                  height       => unsigned_short(f.height),
+                                  border_width => 0,   -- @TODO for development. We'll draw our own frames later.
+                                  u_class      => xcb_window_class_t'Pos (XCB_WINDOW_CLASS_INPUT_OUTPUT), 
+                                  visual       => rend.visualID,
+                                  value_mask   => frameValueMask,
+                                  value_list   => frameCreateAttributes'Access);
 
 
         -- we'll use the UTF-8 title if the app set one. we set the property on the frame
         -- so that we can just pull the property later for the title.
         if setup.ewmh /= null then
-            cookie := xcb_change_property(connection, 
-                                unsigned_char(xcb_prop_mode_t'Pos(XCB_PROP_MODE_REPLACE)),
-                                f.frameID,
-                                setup.ewmh.u_NET_WM_NAME,
-                                XCB_ATOM_STRING,
-                                8,
-                                unsigned(Length(title)),
-                                To_String(title)'Address);
+            cookie := xcb_change_property (c        => connection, 
+                                           mode     => unsigned_char(xcb_prop_mode_t'Pos(XCB_PROP_MODE_REPLACE)),
+                                           window   => f.frameID,
+                                           property => setup.ewmh.u_NET_WM_NAME,
+                                           c_type   => XCB_ATOM_STRING,
+                                           format   => 8,
+                                           data_len => unsigned(Length(title)),
+                                           data     => To_String(title)'Address);
         else
-            cookie := xcb_change_property(connection,
-                                unsigned_char(xcb_prop_mode_t'Pos(XCB_PROP_MODE_REPLACE)),
-                                f.frameID,
-                                XCB_ATOM_WM_NAME,
-                                XCB_ATOM_STRING,
-                                8,
-                                unsigned(Length(title)),
-                                To_String(title)'Address);
+            cookie := xcb_change_property (c        => connection,
+                                           mode     => unsigned_char(xcb_prop_mode_t'Pos(XCB_PROP_MODE_REPLACE)),
+                                           window   => f.frameID,
+                                           property => XCB_ATOM_WM_NAME,
+                                           c_type   => XCB_ATOM_STRING,
+                                           format   => 8,
+                                           data_len => unsigned(Length(title)),
+                                           data     => To_String(title)'Address);
         end if;
 
         -- Grab button presses so we can raise window to the top.
@@ -387,20 +396,22 @@ package body frames is
         cookie := xcb_map_window (c => connection, window => f.frameID);
         cookie := xcb_map_window (c => connection, window => window);
 
-        f.surface.renderer := rend;
-        f.connection := connection;
-        f.appWindow := window;
-        f.title := title;
+        f.surface.renderer  := rend;
+        f.connection        := connection;
+        f.appWindow         := window;
+        f.title             := title;
+        f.focused           := False;
+        f.grabbed           := True;
 
         -- If using OpenGL renderer, create GLX window here out of our mapped window
         if rend.kind = render.OPENGL then
-            f.surface := createOpenGLSurface(f => f, rend => rend);
+            f.surface := createOpenGLSurface (f => f, rend => rend);
         else
-            f.surface := createSoftwareSurface(f => f, rend => rend);
+            f.surface := createSoftwareSurface (f => f, rend => rend);
         end if;
 
         -- Add this new frame to our map
-        allFrames.Include(window, f);
+        allFrames.Include (window, f);
         result := xcb_flush (connection);
 
         Ada.Text_IO.Put_Line ("Framed window" & window'Image & " with parent" & f.frameID'Image);
@@ -410,27 +421,134 @@ package body frames is
     ---------------------------------------------------------------------------
     -- unFrameWindow
     ---------------------------------------------------------------------------
-    procedure unFrameWindow(f : Frame) is
+    procedure unFrameWindow (f : Frame) is
         cookie : xcb.xcb_void_cookie_t;
     begin
-        Ada.Text_IO.Put_Line("Unframe Window");
+        Ada.Text_IO.Put_Line ("Unframe Window");
         -- @TODO cleanup the GLX context, etc.
-        allFrames.Delete(f.appWindow);
+        allFrames.Delete (f.appWindow);
     end unFrameWindow;
+
+    ---------------------------------------------------------------------------
+    -- Focus
+    -- Set the focused property of the Frame with a given frameID to True, set
+    -- all other frames to False. This is extra work but ensures correctness,
+    -- in that only one frame will have the focus at a given time.
+    --
+    -- This ungrabs the inputs for the focused frame, and re-grabs inputs for
+    -- the unfocused frames.
+    ---------------------------------------------------------------------------
+    procedure focus (frameID : xproto.xcb_window_t)
+    is
+        use FrameMap;
+        use xcb;
+        use xproto;
+
+        cookie : xcb_void_cookie_t;
+        ignore : Interfaces.C.int;
+
+        -- Raise window to top of stack
+        procedure raiseToTop (connection : access xcb_connection_t; win : xcb_window_t) is
+            winAttr : aliased xcb_configure_window_value_list_t;
+            cookie  : xcb_void_cookie_t;
+            ignore  : Interfaces.C.int;
+        begin
+            winAttr.stack_mode := xcb_stack_mode_t'Pos (XCB_STACK_MODE_ABOVE);
+
+            cookie := xcb_configure_window_aux (c          => connection, 
+                                                window     => win,
+                                                value_mask => unsigned_short (XCB_CONFIG_WINDOW_STACK_MODE),
+                                                value_list => winAttr'Access);
+
+        end raiseToTop;
+    begin
+        -- Unfocus all frames first. This ensures only one frame has the focus at a time.
+        unfocusAll;
+
+        for f of allFrames loop
+            if f.frameID = frameID then 
+                f.focused := True;
+
+                -- Now that we focused it, we can ungrab the pointer to allow app to get events
+                cookie := xcb_ungrab_button (c          => f.connection,
+                                            button      => 1,
+                                            grab_window => f.appWindow,
+                                            modifiers   => unsigned_short(XCB_MOD_MASK_ANY));
+
+                -- Send the last click to the app
+                cookie := xcb_allow_events (c    => f.connection,
+                                            mode => unsigned_char(xcb_allow_t'Pos(XCB_ALLOW_REPLAY_POINTER)),
+                                            time => XCB_CURRENT_TIME);
+
+                -- Give the app the input focus now.
+                cookie := xcb_set_input_focus(c           => f.connection,
+                                              revert_to   => xcb_input_focus_t'Pos(XCB_INPUT_FOCUS_POINTER_ROOT),
+                                              focus       => f.appWindow,
+                                              time        => XCB_CURRENT_TIME);
+
+                f.grabbed := False;
+                
+                raiseToTop (f.connection, frameID);
+                f.draw; -- might be able to skip this re-draw since raiseToTop should trigger
+                        -- an expose event.
+
+                ignore := xcb_flush (f.connection);
+
+                return;
+            end if;
+        end loop;
+    end focus;
+
+    ---------------------------------------------------------------------------
+    -- unfocusAll
+    -- Remove the focus from all frames in our map, making them grab mouse
+    -- inputs as well.
+    ---------------------------------------------------------------------------
+    procedure unfocusAll is
+        use xcb;
+        use xproto;
+
+        cookie : xcb_void_cookie_t;
+    begin
+        for f of allFrames loop
+            -- Skip if already unfocused to avoid re-draw
+            if f.focused = True then
+                f.focused := False;
+                
+                -- @TODO Might be able to skip this check too
+                if f.grabbed = False then
+                    cookie := xcb_grab_button (c             => f.connection,
+                                            owner_events  => 0,
+                                            grab_window   => f.appWindow,
+                                            event_mask    => unsigned_short(XCB_EVENT_MASK_BUTTON_PRESS), 
+                                            pointer_mode  => unsigned_char(xcb_grab_mode_t'Pos(XCB_GRAB_MODE_SYNC)),
+                                            keyboard_mode => unsigned_char(xcb_grab_mode_t'Pos(XCB_GRAB_MODE_ASYNC)),
+                                            confine_to    => XCB_NONE,
+                                            cursor        => XCB_NONE,
+                                            button        => 1,
+                                            modifiers     => unsigned_short(XCB_MOD_MASK_ANY));
+                    f.grabbed := True;
+                end if;
+
+                -- re-draw
+                f.draw;
+            end if;
+        end loop;
+    end unfocusAll;
 
     ---------------------------------------------------------------------------
     -- isFrame
     -- Linear search through the list of frames to see if this X11 window is a
     --  frame
     ---------------------------------------------------------------------------
-    function isFrame(frameID : xproto.xcb_window_t) return Boolean
+    function isFrame (frameID : xproto.xcb_window_t) return Boolean
     is
         use FrameMap;
-        f : Frame;
     begin
         for C in allFrames.Iterate loop
-            f := Element (C);
-            if f.frameID = frameID then return True; end if;
+            if allFrames(C).frameID = frameID then 
+                return True;
+            end if;
         end loop;
 
         return False;
@@ -440,15 +558,16 @@ package body frames is
     -- getFrameFromList
     -- Linear search through the map of frames to get the Frame object
     --  corresponding to this X11 ID if it exists.
+    -- NOTE: I believe this makes a _copy_ of the element, not sure.
     ---------------------------------------------------------------------------
-    function getFrameFromList(frameID : xproto.xcb_window_t) return Frame
+    function getFrameFromList (frameID : xproto.xcb_window_t) return Frame
     is
         use FrameMap;
-        f : Frame;
     begin
         for C in allFrames.Iterate loop
-            f := Element (C);
-            if f.frameID = frameID then return f; end if;
+            if allFrames(C).frameID = frameID then 
+                return allFrames(C);
+            end if;
         end loop;
 
         raise Program_Error with "Attempted to retrieve non-existent Frame from list";
@@ -459,17 +578,19 @@ package body frames is
     -- Fast search through the map of frames to see if this X11 window already
     --  has a frame.
     ---------------------------------------------------------------------------
-    function hasFrame(windowID : xproto.xcb_window_t) return Boolean
+    function hasFrame (windowID : xproto.xcb_window_t) return Boolean
     is
     begin
-        return allFrames.Contains(windowID);
+        return allFrames.Contains (windowID);
     end hasFrame;
 
     ---------------------------------------------------------------------------
     -- getWindowFrame
+    -- NOTE: I believe this makes a _copy_ of the element, not sure.
     ---------------------------------------------------------------------------
-    function getFrameOfWindow(windowID : xproto.xcb_window_t) return Frame
+    function getFrameOfWindow (windowID : xproto.xcb_window_t) return Frame
     is
+        use FrameMap;
     begin
         return allFrames(windowID);
     end getFrameOfWindow;

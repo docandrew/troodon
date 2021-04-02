@@ -20,7 +20,7 @@ with Util; use Util;
 
 package body events is
 
-    focusWin        : xcb_window_t := 0;
+    -- focusWin        : xcb_window_t := 0;
 
     -- Window movement & resizing.
     -- need both the original window pos
@@ -182,25 +182,11 @@ package body events is
         buttonEvent : buttonEventPtr;
         cookie      : xcb_void_cookie_t;
         ignore      : Interfaces.C.int;
-        geom        : access xcb_get_geometry_reply_t;
+        geom        : xcb_get_geometry_reply_t;
+        f           : Frame;
 
         function toButtonEvent is new Ada.Unchecked_Conversion (Source => events.eventPtr, Target => buttonEventPtr);
-        function toCharsPtr is new Ada.Unchecked_Conversion (Source => events.eventPtr, Target => Interfaces.C.Strings.chars_ptr);
-
-        -- Raise window to top of stack
-        procedure raiseToTop (connection : access xcb_connection_t; win : xcb_window_t) is
-            winAttr : aliased xcb_configure_window_value_list_t;
-            cookie  : xcb_void_cookie_t;
-            ignore  : Interfaces.C.int;
-        begin
-            winAttr.stack_mode := xcb_stack_mode_t'Pos (XCB_STACK_MODE_ABOVE);
-            cookie := xcb_configure_window_aux(c          => connection, 
-                                               window     => win,
-                                               value_mask => unsigned_short (XCB_CONFIG_WINDOW_STACK_MODE),
-                                               value_list => winAttr'Access);
-
-            ignore := xcb_flush(connection);
-        end raiseToTop;
+        -- function toCharsPtr is new Ada.Unchecked_Conversion (Source => events.eventPtr, Target => Interfaces.C.Strings.chars_ptr);
     begin
         
         buttonEvent := toButtonEvent (event);
@@ -210,21 +196,9 @@ package body events is
                               " on window"   & buttonEvent.event'Image &
                               " on child"    & buttonEvent.child'Image);
 
-        -- Re-grab the previously-focused window.
-        if focusWin /= 0 then
-            cookie := xcb_grab_button (c             => connection,
-                                        owner_events  => 0,
-                                        grab_window   => focusWin, 
-                                        event_mask    => unsigned_short(XCB_EVENT_MASK_BUTTON_PRESS), 
-                                        pointer_mode  => unsigned_char(xcb_grab_mode_t'Pos(XCB_GRAB_MODE_SYNC)),
-                                        keyboard_mode => unsigned_char(xcb_grab_mode_t'Pos(XCB_GRAB_MODE_ASYNC)),
-                                        confine_to    => XCB_NONE,
-                                        cursor        => XCB_NONE,
-                                        button        => 1,
-                                        modifiers     => unsigned_short(XCB_MOD_MASK_ANY));                
-        end if;
-
         if isFrame (buttonEvent.event) then
+            f := getFrameFromList(buttonEvent.event); -- COPY?
+
             -- Clicked on a frame. Register the start pos in case this turns into a drag.
             --@TODO see if this was on the resize area.
             dragFrame  := buttonEvent.event;
@@ -232,49 +206,31 @@ package body events is
             dragStartY := buttonEvent.root_y;
             
             -- Need to get geometry of window to determine its current pos
-            geom := xcb_get_geometry_reply (c      => connection,
-                                            cookie => xcb_get_geometry (connection, buttonEvent.event),
-                                            e      => System.Null_Address);
+            geom := Util.getWindowGeometry (connection, buttonEvent.event);
 
-            if geom /= null then
-                winStartX := geom.x;
-                winStartY := geom.y;
-            end if;
+            -- if returned geom is invalid, this might cause some weird results.
+            -- @TODO find a good way to validate that.
+            winStartX := geom.x;
+            winStartY := geom.y;
 
-            -- Focus the app.
-            raiseToTop (connection, buttonEvent.event);
-            focusWin := getFrameFromList(buttonEvent.event).appWindow;
+            -- Focus this frame.
+            Frames.focus (f.frameID);
 
-            Ada.Text_IO.Put_Line ("Clicked on frame, focusing " & focusWin'Image);
+            Ada.Text_IO.Put_Line ("Clicked on frame, focusing " & f.frameID'Image);
 
         elsif hasFrame (buttonEvent.event) then
             -- Clicked on app. Focus it.
-            focusWin := buttonEvent.event;
-            raiseToTop (connection, getFrameOfWindow (focusWin).frameID);
 
-            -- Now that we focused it, we can ungrab the pointer to allow normal
-            -- processing.
-            cookie := xcb_ungrab_button (c           => connection,
-                                         button      => 1,
-                                         grab_window => focusWin,
-                                         modifiers   => unsigned_short(XCB_MOD_MASK_ANY));
+            f := getFrameOfWindow (buttonEvent.event);
+            Frames.focus (f.frameID);
 
-            cookie := xcb_allow_events (c    => connection,
-                                        mode => unsigned_char(xcb_allow_t'Pos(XCB_ALLOW_REPLAY_POINTER)),
-                                        time => XCB_CURRENT_TIME);
-
-            Ada.Text_IO.Put_Line ("Clicked on app, focusing " & focusWin'Image);
+            Ada.Text_IO.Put_Line ("Clicked on app, focusing " & f.frameID'Image);
         else
-            -- Clicked on a non-framed window. 
-            focusWin := buttonEvent.event;
+            -- Clicked on a non-framed window, unfocus all our frames
+            Frames.unfocusAll;
+            -- @TODO give input focus to unframed window?
         end if;
         
-        -- Whatever we focused should have the input focus now too.
-        cookie := xcb_set_input_focus(c           => connection,
-                                      revert_to   => xcb_input_focus_t'Pos(XCB_INPUT_FOCUS_POINTER_ROOT),
-                                      focus       => focusWin,
-                                      time        => XCB_CURRENT_TIME);
-
         ignore := xcb_flush (connection);
     end handleButtonPress;
     
@@ -285,16 +241,12 @@ package body events is
         type buttonEventPtr is access xcb_button_release_event_t;
 
         buttonEvent : buttonEventPtr;
-        -- cookie      : xcb_void_cookie_t;
         ignore      : int;
 
         function toButtonEvent is new Ada.Unchecked_Conversion(Source => eventPtr, Target => buttonEventPtr);
     begin
         buttonEvent := toButtonEvent(event);
 
-        -- cookie := xcb_allow_events(c    => connection,
-        --                            mode => xcb_allow_t'Pos(XCB_ALLOW_REPLAY_POINTER),
-        --                            time => buttonEvent.time);
         -- If we were dragging, stop.
         dragFrame := 0;
 
@@ -365,11 +317,10 @@ package body events is
         -- If we're exposing a window, expose the frame too (if it has one) and vice versa.
         if isFrame(exposeEvent.window) then
             -- exposing a frame
-            -- @TODO eventually this will be drawDecorations or something
-            getFrameFromList(exposeEvent.window).drawTitleBar;
+            getFrameFromList(exposeEvent.window).draw;
         elsif hasFrame(exposeEvent.window) then
             -- exposing a framed application window
-            getFrameOfWindow(exposeEvent.window).drawTitleBar;
+            getFrameOfWindow(exposeEvent.window).draw;
         else
             -- exposing a non-framed window, just let it expose.
             -- @TODO if we determine this is a DE menu or something like that
