@@ -158,12 +158,12 @@ package body Render.Widgets is
 
         use Ada.Numerics.Elementary_Functions; -- for ceil, sqrt
 
-        -- Antialiasing filter radius.
-        -- @TODO make it a function of width, probably.
-        -- filterR  : Float := 1.0;
-
-        newWidth : Float;
         glErr    : GL.GLuint;
+
+        -- If antialiasing, we add a little thickness to the line and blend it in shader.
+        newWidth : Float     := (if antiAliased then width + 2.0 else width);
+        aaInt    : GL.GLint  := (if antiAliased then 1 else 0);
+        
         line     : Render.Util.Line2D;
         orthoM   : Render.Util.Mat4 := Render.Util.ortho (0.0, windowW, windowH, 0.0, -1.0, 1.0);
     begin
@@ -171,23 +171,13 @@ package body Render.Widgets is
 
         -- need to set line width a bit wider than we requested for fragment shader to work
         -- From nVidia GPU Gems 22
-        if antiAliased then
-            --newWidth := Float'Ceiling(2.0 * filterR + width) * sqrt(2.0);
-            newWidth := width + 2.0;
-            GL.glLineWidth (newWidth);
 
-            GLext.glUniform1i (location => Render.Shaders.lineUniformAA,
-                               v0       => 1);
-        else
-            newWidth := width;
-            GL.glLineWidth (newWidth);
-
-            GLext.glUniform1i (location => Render.Shaders.lineUniformAA,
-                               v0       => 0);
-
-        end if;
+        GL.glLineWidth (newWidth);
 
         line := (1 => (fromX, fromY), 2 => (toX, toY));
+
+        GLext.glUniform1i (location => Render.Shaders.lineUniformAA,
+                           v0       => aaInt);
 
         -- projection
         GLext.glUniformMatrix4fv (location  => Render.Shaders.lineUniformOrtho,

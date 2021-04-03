@@ -214,7 +214,7 @@ package body Frames is
                                      fromY    => 0.0,
                                      toX      => w,
                                      toY      => h,
-                                     width    => 3.0,
+                                     width    => 1.0,
                                      r        => 0.0,
                                      g        => 0.0,
                                      b        => 0.0,
