@@ -146,7 +146,6 @@ package body Render.Shaders is
         -- Link the program
         Ada.Text_IO.Put_Line (" Linking Shader Program");
         GLext.glLinkProgram (prog);
-
         GLext.glGetProgramiv (prog, GLext.GL_LINK_STATUS, linkStatus'Access);
 
         if linkStatus /= GL.GL_TRUE then
@@ -324,13 +323,20 @@ package body Render.Shaders is
                                                         name    => Interfaces.C.To_C ("width"));
         lineUniformColor := GLext.glGetUniformLocation (program => lineShaderProg,
                                                         name    => Interfaces.C.To_C ("color"));
+        lineUniformScrH  := GLext.glGetUniformLocation (program => lineShaderProg,
+                                                        name    => Interfaces.C.To_C ("screenHeight"));
+        lineUniformAA    := GLext.glGetUniformLocation (program => lineShaderProg,
+                                                        name    => Interfaces.C.To_C ("antiAliased"));
+
 
         if lineAttribCoord  = -1 or
            lineUniformOrtho = -1 or
            lineUniformFrom  = -1 or
            lineUniformTo    = -1 or
            lineUniformWidth = -1 or
-           lineUniformColor = -1 then
+           lineUniformColor = -1 or
+           lineUniformScrH  = -1 or 
+           lineUniformAA    = -1 then
             raise ShaderException with "Unable to get shader variables from line program.";
         end if;
 

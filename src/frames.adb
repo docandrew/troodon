@@ -175,6 +175,7 @@ package body Frames is
             -- Ada.Text_IO.Put_Line ("Scaling factor :" & sx'Image & ", " & sy'Image);
             Render.Text.renderGLText (title, x, y, w, h);
 
+
             -- Close button
             Render.Widgets.drawCircle (x        => w - Float(BUTTON_RADIUS + BUTTON_GAP),
                                        y        => Float(BUTTON_RADIUS + BUTTON_GAP),
@@ -213,13 +214,25 @@ package body Frames is
                                      fromY    => 0.0,
                                      toX      => w,
                                      toY      => h,
-                                     width    => 5.0,
+                                     width    => 3.0,
                                      r        => 0.0,
                                      g        => 0.0,
                                      b        => 0.0,
                                      a        => 1.0,
                                      windowW  => w,
                                      windowH  => h);
+
+            -- Render.Widgets.drawLine (fromX    => 1.0,
+            --                          fromY    => h / 3.0,
+            --                          toX      => w,
+            --                          toY      => h / 3.0,
+            --                          width    => 5.0,
+            --                          r        => 1.0,
+            --                          g        => 0.0,
+            --                          b        => 0.0,
+            --                          a        => 1.0,
+            --                          windowW  => w,
+            --                          windowH  => h);                                                 
 
             GLX.glxSwapBuffers(rend.display, f.surface.drawable);
         end if;

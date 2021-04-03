@@ -1,3 +1,4 @@
+with Ada.Numerics.Elementary_Functions;
 with Ada.Text_IO;
 with Interfaces.C; use Interfaces.C;
 with System;
@@ -152,16 +153,41 @@ package body Render.Widgets is
                         b         : Float;
                         a         : Float;
                         windowW   : Float;
-                        windowH   : Float) is
+                        windowH   : Float;
+                        antiAliased : Boolean := True) is
 
-        glErr  : GL.GLuint;
-        line   : Render.Util.Line2D := (1 => (fromX, fromY), 2 => (toX, toY));
-        orthoM : Render.Util.Mat4 := Render.Util.ortho (0.0, windowW, windowH, 0.0, -1.0, 1.0);
+        use Ada.Numerics.Elementary_Functions; -- for ceil, sqrt
+
+        -- Antialiasing filter radius.
+        -- @TODO make it a function of width, probably.
+        -- filterR  : Float := 1.0;
+
+        newWidth : Float;
+        glErr    : GL.GLuint;
+        line     : Render.Util.Line2D;
+        orthoM   : Render.Util.Mat4 := Render.Util.ortho (0.0, windowW, windowH, 0.0, -1.0, 1.0);
     begin
         GLext.glUseProgram (Render.Shaders.lineShaderProg);
-        
-        -- need to set line width for fragment shader to work
-        GL.glLineWidth (width);
+
+        -- need to set line width a bit wider than we requested for fragment shader to work
+        -- From nVidia GPU Gems 22
+        if antiAliased then
+            --newWidth := Float'Ceiling(2.0 * filterR + width) * sqrt(2.0);
+            newWidth := width + 2.0;
+            GL.glLineWidth (newWidth);
+
+            GLext.glUniform1i (location => Render.Shaders.lineUniformAA,
+                               v0       => 1);
+        else
+            newWidth := width;
+            GL.glLineWidth (newWidth);
+
+            GLext.glUniform1i (location => Render.Shaders.lineUniformAA,
+                               v0       => 0);
+
+        end if;
+
+        line := (1 => (fromX, fromY), 2 => (toX, toY));
 
         -- projection
         GLext.glUniformMatrix4fv (location  => Render.Shaders.lineUniformOrtho,
@@ -178,19 +204,22 @@ package body Render.Widgets is
                            v1       => toY);
 
         GLext.glUniform1f (location => Render.Shaders.lineUniformWidth,
-                           v0       => width);
-        
+                           v0       => newWidth);
+
         GLext.glUniform4f (location => Render.Shaders.lineUniformColor,
                            v0       => r,
                            v1       => g,
                            v2       => b,
                            v3       => a);
-        
+
+        GLext.glUniform1f (location => Render.Shaders.lineUniformScrH,
+                           v0       => windowH);
+
         GL.glViewport (x      => 0,
                        y      => 0,
                        width  => GL.GLsizei(windowW),
                        height => GL.GLsizei(windowH));
-        
+
         -- Set up VBO
         GLext.glGenBuffers (1, Render.Shaders.lineVBO'Access);
 
@@ -209,7 +238,7 @@ package body Render.Widgets is
                                      pointer    => System.Null_Address);
 
         -- Four corners of the "square" containing our circle (texture coords not used yet)
-        --Ada.Text_IO.Put_Line ("Drawing line from (" & fromX'Image & "," & fromY'Image & ") to (" & toX'Image & "," & toY'Image & ")");
+        -- Ada.Text_IO.Put_Line ("Drawing line from (" & fromX'Image & "," & fromY'Image & ") to (" & toX'Image & "," & toY'Image & ")");
 
         GLext.glBufferData (target => GLext.GL_ARRAY_BUFFER,
                             size   => line'Size / 8,

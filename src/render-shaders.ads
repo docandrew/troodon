@@ -40,6 +40,8 @@ package Render.Shaders is
     lineUniformTo       : GL.GLint;
     lineUniformWidth    : GL.GLint;
     lineUniformColor    : GL.GLint;
+    lineUniformScrH     : GL.GLint;
+    lineUniformAA       : GL.GLint;
     lineVBO             : aliased GL.GLuint;
 
     ---------------------------------------------------------------------------

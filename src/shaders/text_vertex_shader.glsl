@@ -5,7 +5,7 @@ attribute vec4 coord;
 uniform mat4 ortho;         // Orthographic projection matrix
 varying vec2 texcoord;
 
-void main(void)
+void main()
 {
     // Transform vector from screen coords using ortho projection matrix
     // Texture coords will remain something like 1.0, 0.0, etc.

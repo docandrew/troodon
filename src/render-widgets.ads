@@ -15,16 +15,17 @@ package Render.Widgets is
     ---------------------------------------------------------------------------
     -- drawLine
     ---------------------------------------------------------------------------
-    procedure drawLine (fromX     : Float;
-                        fromY     : Float;
-                        toX       : Float;
-                        toY       : Float;
-                        width     : Float;
-                        r         : Float;
-                        g         : Float;
-                        b         : Float;
-                        a         : Float;
-                        windowW   : Float;
-                        windowH   : Float);
+    procedure drawLine (fromX       : Float;
+                        fromY       : Float;
+                        toX         : Float;
+                        toY         : Float;
+                        width       : Float;
+                        r           : Float;
+                        g           : Float;
+                        b           : Float;
+                        a           : Float;
+                        windowW     : Float;
+                        windowH     : Float;
+                        antiAliased : Boolean := True);
 
 end Render.Widgets;
