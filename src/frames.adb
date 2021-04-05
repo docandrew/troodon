@@ -145,13 +145,13 @@ package body Frames is
                 GL.glClearColor (red   => FRAME_BG_GL_FOCUSED.r,
                                  green => FRAME_BG_GL_FOCUSED.g,
                                  blue  => FRAME_BG_GL_FOCUSED.b,
-                                 alpha => FRAME_BG_GL_FOCUSED.a);
+                                 alpha => 1.0); --FRAME_BG_GL_FOCUSED.a);
             else
                 --Ada.Text_IO.Put_Line ("Drawing un-focused window");
                 GL.glClearColor (red   => FRAME_BG_GL.r,
                                  green => FRAME_BG_GL.g,
                                  blue  => FRAME_BG_GL.b,
-                                 alpha => FRAME_BG_GL.a);
+                                 alpha => 1.0); --FRAME_BG_GL.a);
             end if;
 
             GL.glClear (GL.GL_COLOR_BUFFER_BIT);
@@ -390,6 +390,15 @@ package body Frames is
                                            format   => 8,
                                            data_len => unsigned(Length(title)),
                                            data     => To_String(title)'Address);
+
+            -- cookie := xcb_change_property (c        => connection,
+            --                                mode     => unsigned_char(xcb_prop_mode_t'Pos(XCB_PROP_MODE_REPLACE)),
+            --                                window   => f.frameID,
+            --                                property => setup.ewmh.u_NET_WM_WINDOW_OPACITY,
+            --                                c_type   => XCB_ATOM_CARDINAL,
+            --                                format   => 32,
+            --                                
+            --                                );
         else
             cookie := xcb_change_property (c        => connection,
                                            mode     => unsigned_char(xcb_prop_mode_t'Pos(XCB_PROP_MODE_REPLACE)),

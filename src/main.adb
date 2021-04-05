@@ -12,6 +12,7 @@ with xcb;      use xcb;
 with xcb_ewmh; use xcb_ewmh;
 with xproto;   use xproto;
 
+with Compositor;
 with Events;
 with Render;
 with Render.Fonts;
@@ -36,6 +37,8 @@ begin
     display        := Setup.initXlib;
     connection     := Setup.initXcb (display);
     rend           := Render.initRendering (connection, display);
+
+    Compositor.initCompositor (connection);
 
     Render.Fonts.initFonts;
     

@@ -257,12 +257,12 @@ package body Render.Text is
                     );
 
                     -- Ada.Text_IO.Put_Line ("Drawing " & c);
-                    Ada.Text_IO.Put_Line (" Width: " & g.bitmap.width'Image);
-                    Ada.Text_IO.Put_Line (" Rows:  " & g.bitmap.rows'Image);
-                    Ada.Text_IO.Put_Line (" xt:    " & xt'Image);
-                    Ada.Text_IO.Put_Line (" yt:    " & yt'Image);
-                    Ada.Text_IO.Put_Line (" wt:    " & wt'Image);
-                    Ada.Text_IO.Put_Line (" ht:    " & ht'Image);
+                    -- Ada.Text_IO.Put_Line (" Width: " & g.bitmap.width'Image);
+                    -- Ada.Text_IO.Put_Line (" Rows:  " & g.bitmap.rows'Image);
+                    -- Ada.Text_IO.Put_Line (" xt:    " & xt'Image);
+                    -- Ada.Text_IO.Put_Line (" yt:    " & yt'Image);
+                    -- Ada.Text_IO.Put_Line (" wt:    " & wt'Image);
+                    -- Ada.Text_IO.Put_Line (" ht:    " & ht'Image);
 
                     -- Ada.Text_IO.Put_Line ("Text Box: ");
                     -- Ada.Text_IO.Put_Line ("" & textBox(1)'Image);

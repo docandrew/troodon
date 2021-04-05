@@ -51,81 +51,81 @@ package body setup is
     ---------------------------------------------------------------------------
     -- grabMouse
     ---------------------------------------------------------------------------
-    procedure grabMouse(connection : access xcb_connection_t) is
-        mouseCookie : xcb_void_cookie_t;
-        rootWindow : xcb_window_t := setup.getRootWindow(connection);
-        dummy : Interfaces.C.int;
-    begin
-        Ada.Text_IO.Put_Line("Grabbing mouse inputs for root window:" & rootWindow'Image);
-        -- Snag mouse button bindings
-        -- @TODO may be able to remove this code when we grab events in each frame window
+    -- procedure grabMouse(connection : access xcb_connection_t) is
+    --     mouseCookie : xcb_void_cookie_t;
+    --     rootWindow : xcb_window_t := setup.getRootWindow(connection);
+    --     dummy : Interfaces.C.int;
+    -- begin
+    --     Ada.Text_IO.Put_Line("Grabbing mouse inputs for root window:" & rootWindow'Image);
+    --     -- Snag mouse button bindings
+    --     -- @TODO may be able to remove this code when we grab events in each frame window
 
-        -- grab button 1 (left click)
-        mouseCookie :=
-           xcb_grab_button_checked
-              (c             => connection,
-               owner_events  => 0,
-               grab_window   => rootWindow,
-               event_mask    => unsigned_short (XCB_EVENT_MASK_BUTTON_PRESS or XCB_EVENT_MASK_BUTTON_RELEASE),
-               pointer_mode  => xcb_grab_mode_t'Pos (XCB_GRAB_MODE_ASYNC),
-               keyboard_mode => xcb_grab_mode_t'Pos (XCB_GRAB_MODE_ASYNC),
-               confine_to    => rootWindow,
-               cursor        => XCB_NONE,
-               button        => 1,
-               modifiers     => unsigned_short (XCB_MOD_MASK_ANY));
-        checkFatal(connection, mouseCookie, "Unable to grab mouse inputs");
+    --     -- grab button 1 (left click)
+    --     mouseCookie :=
+    --        xcb_grab_button_checked
+    --           (c             => connection,
+    --            owner_events  => 0,
+    --            grab_window   => rootWindow,
+    --            event_mask    => unsigned_short (XCB_EVENT_MASK_BUTTON_PRESS or XCB_EVENT_MASK_BUTTON_RELEASE),
+    --            pointer_mode  => xcb_grab_mode_t'Pos (XCB_GRAB_MODE_ASYNC),
+    --            keyboard_mode => xcb_grab_mode_t'Pos (XCB_GRAB_MODE_ASYNC),
+    --            confine_to    => rootWindow,
+    --            cursor        => XCB_NONE,
+    --            button        => 1,
+    --            modifiers     => unsigned_short (XCB_MOD_MASK_ANY));
+    --     checkFatal(connection, mouseCookie, "Unable to grab mouse inputs");
 
-        -- grab button 3 (right click)
-        mouseCookie :=
-           xcb_grab_button_checked
-              (c             => connection,
-               owner_events  => 0,
-               grab_window   => rootWindow,
-               event_mask    => unsigned_short (XCB_EVENT_MASK_BUTTON_PRESS or XCB_EVENT_MASK_BUTTON_RELEASE),
-               pointer_mode  => xcb_grab_mode_t'Pos (XCB_GRAB_MODE_ASYNC),
-               keyboard_mode => xcb_grab_mode_t'Pos (XCB_GRAB_MODE_ASYNC),
-               confine_to    => rootWindow,
-               cursor        => XCB_NONE,
-               button        => 3,
-               modifiers     => unsigned_short (XCB_MOD_MASK_ANY));
-        checkFatal(connection, mouseCookie, "Unable to grab mouse inputs (2)");
+    --     -- grab button 3 (right click)
+    --     mouseCookie :=
+    --        xcb_grab_button_checked
+    --           (c             => connection,
+    --            owner_events  => 0,
+    --            grab_window   => rootWindow,
+    --            event_mask    => unsigned_short (XCB_EVENT_MASK_BUTTON_PRESS or XCB_EVENT_MASK_BUTTON_RELEASE),
+    --            pointer_mode  => xcb_grab_mode_t'Pos (XCB_GRAB_MODE_ASYNC),
+    --            keyboard_mode => xcb_grab_mode_t'Pos (XCB_GRAB_MODE_ASYNC),
+    --            confine_to    => rootWindow,
+    --            cursor        => XCB_NONE,
+    --            button        => 3,
+    --            modifiers     => unsigned_short (XCB_MOD_MASK_ANY));
+    --     checkFatal(connection, mouseCookie, "Unable to grab mouse inputs (2)");
 
-        Ada.Text_IO.Put_Line("Grabbed mouse successfully.");
-    end grabMouse;
+    --     Ada.Text_IO.Put_Line("Grabbed mouse successfully.");
+    -- end grabMouse;
 
-    procedure grabKeyboard(connection : access xcb_connection_t) is
-        keyCookie : xcb_grab_keyboard_cookie_t;
+    -- procedure grabKeyboard(connection : access xcb_connection_t) is
+    --     keyCookie : xcb_grab_keyboard_cookie_t;
 
-        type KeyReplyPtr is access all xcb_grab_keyboard_reply_t;
-        procedure free is new Ada.Unchecked_Deallocation(Object => xcb_grab_keyboard_reply_t, Name => KeyReplyPtr);
-        keyReply : KeyReplyPtr;
+    --     type KeyReplyPtr is access all xcb_grab_keyboard_reply_t;
+    --     procedure free is new Ada.Unchecked_Deallocation(Object => xcb_grab_keyboard_reply_t, Name => KeyReplyPtr);
+    --     keyReply : KeyReplyPtr;
 
-        rootWindow : xcb_window_t := setup.getRootWindow(connection);
-        dummy : Interfaces.C.int;
-    begin
-        Ada.Text_IO.Put_Line("Grabbing keyboard inputs for root window:" & rootWindow'Image);
+    --     rootWindow : xcb_window_t := setup.getRootWindow(connection);
+    --     dummy : Interfaces.C.int;
+    -- begin
+    --     Ada.Text_IO.Put_Line("Grabbing keyboard inputs for root window:" & rootWindow'Image);
 
-        keyCookie := xcb_grab_keyboard(c            => connection,
-                                       owner_events => 1,
-                                       grab_window  => rootWindow,
-                                       time         => XCB_CURRENT_TIME,
-                                       pointer_mode => xcb_grab_mode_t'Pos(XCB_GRAB_MODE_ASYNC),
-                                       keyboard_mode => xcb_grab_mode_t'Pos(XCB_GRAB_MODE_ASYNC));
+    --     keyCookie := xcb_grab_keyboard(c            => connection,
+    --                                    owner_events => 1,
+    --                                    grab_window  => rootWindow,
+    --                                    time         => XCB_CURRENT_TIME,
+    --                                    pointer_mode => xcb_grab_mode_t'Pos(XCB_GRAB_MODE_ASYNC),
+    --                                    keyboard_mode => xcb_grab_mode_t'Pos(XCB_GRAB_MODE_ASYNC));
 
-        keyReply := keyReplyPtr(xcb_grab_keyboard_reply (c => connection,
-                                             cookie => keyCookie,
-                                             e => System.Null_Address));
+    --     keyReply := keyReplyPtr(xcb_grab_keyboard_reply (c => connection,
+    --                                          cookie => keyCookie,
+    --                                          e => System.Null_Address));
 
-        if keyReply /= null then
-            if keyReply.status = xcb_grab_status_t'Pos(XCB_GRAB_STATUS_SUCCESS) then
-                Ada.Text_IO.Put_Line("Grabbed keyboard successfully.");
-            else
-                Ada.Text_IO.Put_Line("Failed to grab keyboard.");
-            end if;
+    --     if keyReply /= null then
+    --         if keyReply.status = xcb_grab_status_t'Pos(XCB_GRAB_STATUS_SUCCESS) then
+    --             Ada.Text_IO.Put_Line("Grabbed keyboard successfully.");
+    --         else
+    --             Ada.Text_IO.Put_Line("Failed to grab keyboard.");
+    --         end if;
 
-            free(keyReply);
-        end if;
-    end grabKeyboard;
+    --         free(keyReply);
+    --     end if;
+    -- end grabKeyboard;
 
     ---------------------------------------------------------------------------
     -- initXlib
@@ -144,13 +144,13 @@ package body setup is
         Ada.Text_IO.Put_Line("Troodon: Connected to X Server");
         return display;
     end initXlib;
-    
+
     ---------------------------------------------------------------------------
     -- initXcb
     -- Take control over the X Server connection and set up event handlers.
     -- @return connection if successful, null otherwise
     ---------------------------------------------------------------------------
-    function initXcb(display : not null access Xlib.Display) return access xcb_connection_t is
+    function initXcb (display : not null access Xlib.Display) return access xcb_connection_t is
         connection   : access xcb_connection_t;
         screenNumber : aliased int;
         screen       : access xcb_screen_t;
@@ -237,14 +237,6 @@ package body setup is
 
         return connection;
     end initXcb;
-
-
-    ---------------------------------------------------------------------------
-    -- initRendering
-    -- attempt to get a GLX context we can use for accelerated drawing.
-    -- @TODO fallback to software rendering
-    ---------------------------------------------------------------------------
-
 
     ---------------------------------------------------------------------------
     -- getScreen
