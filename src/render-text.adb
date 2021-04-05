@@ -1,9 +1,13 @@
+with Ada.Characters.Conversions;
+with Ada.Strings.UTF_Encoding;
+with Ada.Strings.UTF_Encoding.Wide_Wide_Strings;
 with Ada.Text_IO;
 with Interfaces; use Interfaces;
 with Interfaces.C; use Interfaces.C;
 with System;
 
 with Freetype;
+with FTimage;
 with GL;
 with GLext;
 
@@ -14,16 +18,17 @@ with Render.Util;
 package body Render.Text is
 
         -----------------------------------------------------------------------
-        -- render a string to an OpenGL surface
-        -- @param x, y top-left coordinate of the text.
+        -- renderGLText
         -----------------------------------------------------------------------
-        procedure renderGLText (s       : String; 
-                                x       : in out Float;
-                                y       : in out Float;
-                                windowW : Float;
-                                windowH : Float)
+        procedure renderGLText (s        : String;
+                                x        : in out Float;
+                                y        : in out Float;
+                                windowW  : Float;
+                                windowH  : Float;
+                                fontFace : Freetype.FT_Face := Render.Fonts.face)
         is
-            
+            package UTF renames Ada.Strings.UTF_Encoding.Wide_Wide_Strings;
+
             textBox : Render.Util.Box;
 
             tex   : aliased GL.GLuint;
@@ -36,6 +41,9 @@ package body Render.Text is
             ht : Float;
 
             g : Freetype.FT_GlyphSlot;
+
+            -- Need a string of UTF-32 characters that Freetype can render.
+            s32 : Wide_Wide_String := UTF.Decode (s);
 
             orthoM : Render.Util.Mat4 := Render.Util.ortho (0.0, windowW, windowH, 0.0, -1.0, 1.0);
         begin
@@ -63,6 +71,7 @@ package body Render.Text is
             -- Ada.Text_IO.Put_Line ("glBindTexture error? " & glErr'Image);
 
             -- Set text color
+            -- @TODO make this a function param
             GLext.glUniform4f (Render.Shaders.textUniformColor, 1.0, 1.0, 1.0, 1.0);
 
             -- glErr := GL.glGetError;
@@ -158,36 +167,88 @@ package body Render.Text is
             -- glErr := GL.glGetError;
             -- Ada.Text_IO.Put_Line ("glVertexAttribPointer error? " & glErr'Image);
 
-            -- Loop through each character of the string, drawing it.                                         
-            for c of s loop
+            -- Loop through each character of the string, drawing it.
+            -- Ada.Text_IO.Put_Line ("s32'Length:" & Positive'Image(s32'Length));
+            for c of s32 loop
                 -- attempt to render the character, skip chars that aren't associated
                 -- with a drawable glyph.
-                if Render.Fonts.loadGlyph(c) then
-                    g := Render.Fonts.face.glyph;
+                if Render.Fonts.loadGlyph (c, fontFace) then
+                    g := fontFace.glyph;
+
+                    --Ada.Text_IO.Put_Line (" Glyph Pixel Mode: " & g.bitmap.pixel_mode'Image);
 
                     -- upload the bitmap
-                    GL.glTexImage2D (target          => GL.GL_TEXTURE_2D,
-                                     level           => 0,
-                                     internalFormat  => GL.GL_ALPHA,
-                                     width           => GL.GLsizei(g.bitmap.width),
-                                     height          => GL.GLsizei(g.bitmap.rows),
-                                     border          => 0,
-                                     format          => GL.GL_ALPHA,
-                                     c_type          => GL.GL_UNSIGNED_BYTE,
-                                     pixels          => g.bitmap.buffer);
+                    if g.bitmap.pixel_mode = FTimage.FT_Pixel_Mode'Pos(FTimage.FT_PIXEL_MODE_BGRA) then
+                        -- Color font, probably emoji.
 
-                    -- glErr := GL.glGetError;
-                    -- Ada.Text_IO.Put_Line ("glTexImage2D error? " & glErr'Image);
+                        GLext.glUniform1i (location => Render.Shaders.textUniformAOnly,
+                                           v0       => 0);
 
-                    -- Make adjustments for letter placement
-                    xt := x + Float(g.bitmap_left);
-                    yt := y - Float(g.bitmap_top);
+                        GL.glTexImage2D (target         => GL.GL_TEXTURE_2D,
+                                         level          => 0,
+                                         internalFormat => GL.GL_RGBA,
+                                         width          => GL.GLsizei(g.bitmap.width),
+                                         height         => GL.GLsizei(g.bitmap.rows),
+                                         border         => 0,
+                                         format         => GL.GL_BGRA,
+                                         c_type         => GL.GL_UNSIGNED_BYTE,
+                                         pixels         => g.bitmap.buffer);
 
-                    -- Get width, height of letter
-                    wt := GL.GLfloat(g.bitmap.width);
-                    ht := GL.GLfloat(g.bitmap.rows);
+                        -- Bitmap fonts don't respect Set_Pixel_Size like the vector
+                        -- rendering does, so we need to use OpenGL to scale the quads.
+                        -- There's probably more to it than this, but we just set the
+                        -- height to the selected font size, and adjust width to keep
+                        -- the original glyph's aspect ratio.
+                        -- Looks just a little better if we bump up the font size here
+                        declare
+                            aspect : Float := Float(g.bitmap.width) / Float(g.bitmap.rows);
+                            --(cols per row)
+                        begin
+                            ht := GL.GLFloat(Render.Fonts.FONT_SIZE + 4);
+                            wt := GL.GLFloat(Render.Fonts.FONT_SIZE + 4) * aspect;
 
-                    -- Use window coords for placement.
+                        end;
+
+                        -- Need to use top-left corner of the emoji here.
+                        xt := x;
+                        yt := y - ht;
+                        -- xt := x - wt;
+                        -- yt := y - ht;
+
+                        -- Advance emojis horizontally only.
+                        -- @TODO padding?
+                        x := x + Float(wt);
+                    else
+                        -- monochrome font.
+                        GLext.glUniform1i (location => Render.Shaders.textUniformAOnly,
+                                           v0       => 1);
+
+                        GL.glTexImage2D (target         => GL.GL_TEXTURE_2D,
+                                         level          => 0,
+                                         internalFormat => GL.GL_ALPHA,
+                                         width          => GL.GLsizei(g.bitmap.width),
+                                         height         => GL.GLsizei(g.bitmap.rows),
+                                         border         => 0,
+                                         format         => GL.GL_ALPHA,
+                                         c_type         => GL.GL_UNSIGNED_BYTE,
+                                         pixels         => g.bitmap.buffer);
+
+                        -- Make adjustments for letter placement
+                        xt := x + Float(g.bitmap_left);
+                        yt := y - Float(g.bitmap_top);
+
+                        -- Get width, height of letter
+                        wt := GL.GLfloat(g.bitmap.width);
+                        ht := GL.GLfloat(g.bitmap.rows);
+
+                        -- Advance the coords to the next char
+                        -- advance is in units of pixel/64
+                        x := x + Float(g.advance.x) / 64.0;
+                        y := y + Float(g.advance.y) / 64.0;
+                    end if;
+
+                    -- Use window coords for placement. Everything is "upside down"
+                    -- since our origin (0,0) is at top-left of window.
                     textBox := (
                         1 => (xt,      yt + ht, 0.0, 1.0), -- bottom left
                         2 => (xt,      yt,      0.0, 0.0), -- top left
@@ -196,12 +257,12 @@ package body Render.Text is
                     );
 
                     -- Ada.Text_IO.Put_Line ("Drawing " & c);
-                    -- Ada.Text_IO.Put_Line (" Width: " & g.bitmap.width'Image);
-                    -- Ada.Text_IO.Put_Line (" Rows:  " & g.bitmap.rows'Image);
-                    -- Ada.Text_IO.Put_Line (" xt:    " & xt'Image);
-                    -- Ada.Text_IO.Put_Line (" yt:    " & yt'Image);
-                    -- Ada.Text_IO.Put_Line (" wt:    " & wt'Image);
-                    -- Ada.Text_IO.Put_Line (" ht:    " & ht'Image);
+                    Ada.Text_IO.Put_Line (" Width: " & g.bitmap.width'Image);
+                    Ada.Text_IO.Put_Line (" Rows:  " & g.bitmap.rows'Image);
+                    Ada.Text_IO.Put_Line (" xt:    " & xt'Image);
+                    Ada.Text_IO.Put_Line (" yt:    " & yt'Image);
+                    Ada.Text_IO.Put_Line (" wt:    " & wt'Image);
+                    Ada.Text_IO.Put_Line (" ht:    " & ht'Image);
 
                     -- Ada.Text_IO.Put_Line ("Text Box: ");
                     -- Ada.Text_IO.Put_Line ("" & textBox(1)'Image);
@@ -227,10 +288,6 @@ package body Render.Text is
                     -- glErr := GL.glGetError;
                     -- Ada.Text_IO.Put_Line ("glDrawArrays error? " & glErr'Image);
 
-                    -- Advance the coords to the next char
-                    -- advance is in units of pixel/64
-                    x := x + Float(g.advance.x) / 64.0;
-                    y := y + Float(g.advance.y) / 64.0;
                 end if;
             end loop;
 

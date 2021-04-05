@@ -1127,6 +1127,7 @@ package freetype is
   --   *   @FT_Size_Metrics.
   --    
 
+   -- Troodon: change type of available_sizes to Address for easier use
    type FT_FaceRec_u is record
       num_faces : aliased fttypes.FT_Long;  -- /usr/include/freetype2/freetype/freetype.h:1030
       face_index : aliased fttypes.FT_Long;  -- /usr/include/freetype2/freetype/freetype.h:1031
@@ -1136,7 +1137,7 @@ package freetype is
       family_name : access fttypes.FT_String;  -- /usr/include/freetype2/freetype/freetype.h:1038
       style_name : access fttypes.FT_String;  -- /usr/include/freetype2/freetype/freetype.h:1039
       num_fixed_sizes : aliased fttypes.FT_Int;  -- /usr/include/freetype2/freetype/freetype.h:1041
-      available_sizes : access FT_Bitmap_Size;  -- /usr/include/freetype2/freetype/freetype.h:1042
+      available_sizes : System.Address; --access FT_Bitmap_Size;  -- /usr/include/freetype2/freetype/freetype.h:1042
       num_charmaps : aliased fttypes.FT_Int;  -- /usr/include/freetype2/freetype/freetype.h:1044
       charmaps : System.Address;  -- /usr/include/freetype2/freetype/freetype.h:1045
       c_generic : aliased fttypes.FT_Generic;  -- /usr/include/freetype2/freetype/freetype.h:1047

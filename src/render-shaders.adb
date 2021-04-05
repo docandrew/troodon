@@ -86,18 +86,13 @@ package body Render.Shaders is
         linkStatus    : aliased GL.GLint := GL.GL_FALSE;
         prog          : GL.GLuint := 0;
     begin
-        Ada.Text_IO.Put_Line (" Vert Shader Size: " & vertSize'Image);
-        Ada.Text_IO.Put_Line (" Vert Shader Addr: " & System.Address_Image(vertSource));
-        Ada.Text_IO.Put_Line (" Loaded Vertex Shader: "   & LF & vertShaderStr & LF);
-        -- for i in 1..vertSize loop
-        --     Ada.Text_IO.Put(To_Ada(vertShaderChars(i)));
-        -- end loop;
-        Ada.Text_IO.Put_Line (" Frag Shader Size: " & fragSize'Image);
-        Ada.Text_IO.Put_Line (" Frag Shader Addr: " & System.Address_Image(fragSource));
-        Ada.Text_IO.Put_Line (" Loaded Fragment Shader: " & LF & fragShaderStr & LF);
-        -- for i in 1..fragSize loop
-        --     Ada.Text_IO.Put(To_Ada(fragShaderChars(i)));
-        -- end loop;
+        -- Ada.Text_IO.Put_Line (" Vert Shader Size: " & vertSize'Image);
+        -- Ada.Text_IO.Put_Line (" Vert Shader Addr: " & System.Address_Image(vertSource));
+        -- Ada.Text_IO.Put_Line (" Loaded Vertex Shader: "   & LF & vertShaderStr & LF);
+
+        -- Ada.Text_IO.Put_Line (" Frag Shader Size: " & fragSize'Image);
+        -- Ada.Text_IO.Put_Line (" Frag Shader Addr: " & System.Address_Image(fragSource));
+        -- Ada.Text_IO.Put_Line (" Loaded Fragment Shader: " & LF & fragShaderStr & LF);
 
         -- Set up Font shaders
         -- Easier to call multiple times than set up an array of C strings in Ada
@@ -210,11 +205,14 @@ package body Render.Shaders is
                                                         name    => Interfaces.C.To_C ("color"));
         textUniformOrtho := GLext.glGetUniformLocation (program => textShaderProg,
                                                         name    => Interfaces.C.To_C ("ortho"));
+        textUniformAOnly := GLext.glGetUniformLocation (program => textShaderProg,
+                                                        name    => Interfaces.C.To_C ("alphaOnly"));
 
         if textAttribCoord  = -1 or
            textUniformTex   = -1 or
            textUniformColor = -1 or
-           textUniformOrtho = -1 then
+           textUniformOrtho = -1 or 
+           textUniformAOnly = -1 then
              raise ShaderException with "Unable to get shader variables from text program.";
         end if;
     end initTextShaders;

@@ -16,6 +16,7 @@ package Render.Shaders is
     textUniformTex     : GL.GLint;
     textUniformColor   : GL.GLint;
     textUniformOrtho   : GL.GLint;
+    textUniformAOnly   : GL.GLint;  -- if font texture is alpha channel only (monochrome fonts)
     textVBO            : aliased GL.GLuint;
 
     -- Circle shader

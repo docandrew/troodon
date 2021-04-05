@@ -1,3 +1,4 @@
+with Ada.Characters.Conversions;
 with Ada.Containers.Indefinite_Hashed_Maps;
 with Ada.Containers; use Ada.Containers;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
@@ -101,8 +102,8 @@ package body Frames is
         y : Float := 20.0;
 
         -- window dimensions
-        w : Float;
-        h : Float;
+        winW : Float;
+        winH : Float;
 
         glErr : GL.GLenum;
     begin
@@ -167,60 +168,62 @@ package body Frames is
             -- glErr := GL.glGetError;
             -- Ada.Text_IO.Put_Line ("glBlendFunc error? " & glErr'Image);
 
-            w := Float(f.width);
-            h := Float(f.height);
+            winW := Float(f.width);
+            winH := Float(f.height);
 
             -- Ada.Text_IO.Put_Line ("Window Width: " & f.width'Image);
             -- Ada.Text_IO.Put_Line ("Window Height: " & f.height'Image);
             -- Ada.Text_IO.Put_Line ("Scaling factor :" & sx'Image & ", " & sy'Image);
-            Render.Text.renderGLText (title, x, y, w, h);
+            --Render.Text.renderGLText (Ada.Characters.Conversions.To_Wide_Wide_String (title), x, y, w, h);
 
+            Render.Text.renderGLText (title, x, y, winW, winH);
+            Render.Text.renderGLText ("🙂🔋⌨️", x, y, winW, winH, Render.Fonts.emojiFace);
 
             -- Close button
-            Render.Widgets.drawCircle (x        => w - Float(BUTTON_RADIUS + BUTTON_GAP),
+            Render.Widgets.drawCircle (x        => winW - Float(BUTTON_RADIUS + BUTTON_GAP),
                                        y        => Float(BUTTON_RADIUS + BUTTON_GAP),
                                        radius   => Float(BUTTON_RADIUS),
                                        r        => BUTTON_CLOSE_COLOR_ACTIVE.r,
                                        g        => BUTTON_CLOSE_COLOR_ACTIVE.g,
                                        b        => BUTTON_CLOSE_COLOR_ACTIVE.b,
                                        a        => BUTTON_CLOSE_COLOR_ACTIVE.a,
-                                       windowW  => w,
-                                       windowH  => h);
+                                       windowW  => winW,
+                                       windowH  => winH);
 
             -- Maximize button
-            Render.Widgets.drawCircle (x        => w - Float(3 * BUTTON_RADIUS + 2 * BUTTON_GAP),
+            Render.Widgets.drawCircle (x        => winW - Float(3 * BUTTON_RADIUS + 2 * BUTTON_GAP),
                                        y        => Float(BUTTON_RADIUS + BUTTON_GAP),
                                        radius   => Float(BUTTON_RADIUS),
                                        r        => BUTTON_MAXIMIZE_COLOR_ACTIVE.r,
                                        g        => BUTTON_MAXIMIZE_COLOR_ACTIVE.g,
                                        b        => BUTTON_MAXIMIZE_COLOR_ACTIVE.b,
                                        a        => BUTTON_MAXIMIZE_COLOR_ACTIVE.a,
-                                       windowW  => w,
-                                       windowH  => h);
+                                       windowW  => winW,
+                                       windowH  => winH);
 
             -- Minimize button
-            Render.Widgets.drawCircle (x        => w - Float(5 * BUTTON_RADIUS + 3 * BUTTON_GAP),
+            Render.Widgets.drawCircle (x        => winW - Float(5 * BUTTON_RADIUS + 3 * BUTTON_GAP),
                                        y        => Float(BUTTON_RADIUS + BUTTON_GAP),
                                        radius   => Float(BUTTON_RADIUS),
                                        r        => BUTTON_MINIMIZE_COLOR_ACTIVE.r,
                                        g        => BUTTON_MINIMIZE_COLOR_ACTIVE.g,
                                        b        => BUTTON_MINIMIZE_COLOR_ACTIVE.b,
                                        a        => BUTTON_MINIMIZE_COLOR_ACTIVE.a,
-                                       windowW  => w,
-                                       windowH  => h);
+                                       windowW  => winW,
+                                       windowH  => winH);
 
             -- Draw an X on the close button
             Render.Widgets.drawLine (fromX    => 0.0,
                                      fromY    => 0.0,
-                                     toX      => w,
-                                     toY      => h,
+                                     toX      => winW,
+                                     toY      => winH,
                                      width    => 1.0,
                                      r        => 0.0,
                                      g        => 0.0,
                                      b        => 0.0,
                                      a        => 1.0,
-                                     windowW  => w,
-                                     windowH  => h);
+                                     windowW  => winW,
+                                     windowH  => winH);
 
             -- Render.Widgets.drawLine (fromX    => 1.0,
             --                          fromY    => h / 3.0,
