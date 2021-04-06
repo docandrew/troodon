@@ -56,7 +56,7 @@ package body Render.Shaders is
     -- createShaderProgram
     -- Given the addresses of vertex shader and fragment shader source code,
     -- and their respective sizes, compile and link these shaders into a shader
-    -- program.
+    -- program. Note that until there's a drawable window, this will fail.
     ---------------------------------------------------------------------------
     function createShaderProgram (vertSource : System.Address;
                                   vertSize   : Interfaces.C.size_t;

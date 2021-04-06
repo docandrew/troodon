@@ -6,8 +6,7 @@ with xproto;
 with Xlib;
 
 -- with setup;
-
-package render is
+package Render is
     OpenGLException : Exception;
     -- function getVisualID return Interfaces.C.int;
     -- procedure setVisualID(id : Interfaces.C.int);
@@ -51,6 +50,17 @@ package render is
         end case;
     end record;
 
+    ---------------------------------------------------------------------------
+    -- getFBConfig
+    -- Query the X Server for an acceptable framebuffer configuration.
+    ---------------------------------------------------------------------------
+    function getFBConfig (connection : not null access xcb.xcb_connection_t;
+                          display    : not null access Xlib.Display) return GLX.GLXFBConfig;
+
+    ---------------------------------------------------------------------------
+    -- initRendering
+    -- Set up the OpenGL Rendering backend
+    ---------------------------------------------------------------------------
     function initRendering (connection : not null access xcb.xcb_connection_t;
                             display    : not null access Xlib.Display) return Renderer;
 end render;

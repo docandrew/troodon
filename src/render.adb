@@ -23,6 +23,8 @@ package body render is
     -- We prefer a hardware-accelerated, eye-candy heavy rendering backend like
     -- OpenGL. However, in the event that this is unavailable, we can fall back
     -- to using a software renderer.
+    -- @TODO probably just get rid of software rendering entirely. Let Mesa
+    -- do that part.
     ---------------------------------------------------------------------------
     function initSoftwareRenderer (connection : access xcb.xcb_connection_t) return Render.Renderer is
         -- @TODO load these from a config
@@ -65,21 +67,18 @@ package body render is
     end initSoftwareRenderer;
 
     ---------------------------------------------------------------------------
-    -- initRendering
-    -- Try to set up OpenGL rendering
+    -- getFBConfig
+    -- Query the X Server for an acceptable framebuffer configuration.
     ---------------------------------------------------------------------------
-    function initRendering(connection : not null access xcb.xcb_connection_t;
-                           display    : not null access Xlib.Display) return Renderer
+    function getFBConfig (connection : not null access xcb.xcb_connection_t;
+                          display    : not null access Xlib.Display) return GLX.GLXFBConfig
     is
         use GLX;
+
         glxRet        : int;
-        visualID      : aliased int;
         fbConfig      : GLX.GLXFBConfig := null;
-        fbConfigAddr  : System.Address; --access GLX.GLXFBConfig := null;
+        fbConfigAddr  : System.Address;
         fbConfigCount : aliased int;
-        glxContext    : GLX.GLXContext;
-        colormap      : xproto.xcb_colormap_t;
-        cookie        : xcb.xcb_void_cookie_t;
 
         visualAttribs : GLX.IntArray(1..23) := (
             GLX_X_RENDERABLE,   1,
@@ -95,24 +94,12 @@ package body render is
             GLX_DOUBLEBUFFER,   1,
             0
         );
-
-        -- Experiment to see if we can get glxContext before renderable surfaces
-        -- are created.
-        -- vis2          : access Xutil.XVisualInfo;
-        -- visualAttribs2 : GLX.IntArray(1..5) := (
-        --     GLX.GLX_RGBA,
-        --     GLX.GLX_DEPTH_SIZE,
-        --     24,
-        --     GLX.GLX_DOUBLEBUFFER,
-        --     0
-        -- );
     begin
         -- Setup Frame Buffer Configuration
-        fbConfigAddr := 
-            GLX.glXChooseFBConfig (dpy        => display,
-                                   screen     => Xlib.XDefaultScreen(display),
-                                   attribList => visualAttribs,
-                                   nitems     => fbConfigCount'Access);
+        fbConfigAddr := GLX.glXChooseFBConfig (dpy        => display,
+                                               screen     => Xlib.XDefaultScreen(display),
+                                               attribList => visualAttribs,
+                                               nitems     => fbConfigCount'Access);
 
         if fbConfigAddr = System.Null_Address or fbConfigCount = 0 then
             Ada.Text_IO.Put_Line("Troodon: Unable to get GLX framebuffer config");
@@ -129,33 +116,37 @@ package body render is
             fbConfig := fbConfigs(1);
         end;
 
+        return fbConfig;
+    end getFBConfig;
+
+    ---------------------------------------------------------------------------
+    -- initRendering
+    -- Try to set up OpenGL rendering
+    ---------------------------------------------------------------------------
+    function initRendering(connection : not null access xcb.xcb_connection_t;
+                           display    : not null access Xlib.Display) return Renderer
+    is
+        use GLX;
+
+        glxRet        : int;
+        visualID      : aliased int;
+        glxContext    : GLX.GLXContext;
+        colormap      : xproto.xcb_colormap_t;
+        cookie        : xcb.xcb_void_cookie_t;
+        fbConfig      : GLX.GLXFBConfig;
+    begin
+
+        fbConfig := getFBConfig(connection, display);
+
         glxRet := GLX.glXGetFBConfigAttrib (dpy       => display,
                                             config    => fbConfig,
                                             attribute => GLX.GLX_VISUAL_ID,
                                             value     => visualID'Access);
 
-        --Ada.Text_IO.Put_Line("glxRet:" & glxRet'Image);
-
         if glxRet = GLX.GLX_NO_EXTENSION or glxRet = GLX_BAD_ATTRIBUTE then
             Ada.Text_IO.Put_Line ("Troodon: queried GLX for Visual ID, but does not exist.");
             raise OpenGLException;
         end if;
-
-        --------- Experiment
-        -- Ada.Text_IO.Put_Line ("Choosing visual ID of display");
-        -- vis2 := GLX.glxChooseVisual (display, 0, visualAttribs2);
-
-        -- if vis2 = null then
-        --     Ada.Text_IO.Put_Line (" No matching visual found matching our needs");
-        -- end if;
-
-        -- -- Create new OpenGL Context
-        -- glxContext := GLX.glxCreateContext (dpy       => display,
-        --                                     vis       => vis2,
-        --                                     shareList => null,
-        --                                     direct    => 1);
-
-        --------- End Experiment
 
         Ada.Text_IO.Put_Line ("Troodon: Creating GLX Context");
         glxContext := GLX.glXCreateNewContext (dpy         => display,

@@ -21,6 +21,8 @@ with Setup;
 with Taskbar;
 
 procedure Main is
+    use Render;
+
     display    : access Xlib.Display;
     connection : access xcb.xcb_connection_t;
     ignore     : int;
@@ -38,7 +40,11 @@ begin
     connection     := Setup.initXcb (display);
     rend           := Render.initRendering (connection, display);
 
-    Compositor.initCompositor (connection);
+    Compositor.initCompositor (connection, rend);
+
+    if rend.kind = Render.OPENGL then
+        Render.Shaders.initShaders;
+    end if;
 
     Render.Fonts.initFonts;
     

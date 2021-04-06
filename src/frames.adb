@@ -136,9 +136,9 @@ package body Frames is
             --
             -- @TODO create a background window and then use that to create the context
             -- and init shaders.
-            if Render.Shaders.textShaderProg = 0 then
-                Render.Shaders.initShaders;
-            end if;
+            -- if Render.Shaders.textShaderProg = 0 then
+            --     Render.Shaders.initShaders;
+            -- end if;
 
             if f.focused then
                 --Ada.Text_IO.Put_Line ("Drawing focused window");
@@ -247,7 +247,7 @@ package body Frames is
     -- createOpenGLSurface
     ---------------------------------------------------------------------------
     function createOpenGLSurface (f    : Frame;
-                                  rend : render.Renderer) return render.RenderingSurface
+                                  rend : Render.Renderer) return render.RenderingSurface
     is
         glxWindow : GLX.GLXWindow;
         drawable  : GLX.GLXDrawable;
