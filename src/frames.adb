@@ -15,6 +15,7 @@ with GLX;
 with xcb;
 with xproto;
 
+with Compositor;
 with Render.Fonts;
 with Render.Shaders;
 with Render.Text;

@@ -14,6 +14,7 @@ with GLX;
 with xcb; use xcb;
 with xproto; use xproto;
 
+with Compositor;
 with Frames;
 with Setup;
 with Util; use Util;
@@ -303,8 +304,9 @@ package body events is
     ---------------------------------------------------------------------------
     -- handleExpose
     ---------------------------------------------------------------------------
-    procedure handleExpose(connection : access xcb_connection_t;
-                           event : eventPtr) is
+    procedure handleExpose (connection : access xcb_connection_t;
+                            event      : eventPtr;
+                            rend       : Render.Renderer) is
         use Frames;
 
         type ExposeEventPtr is access all xcb_expose_event_t;
@@ -313,6 +315,11 @@ package body events is
 
     begin
         -- Ada.Text_IO.Put_Line("enter handleExpose");
+
+        -- Tell compositor to blit this to the overlay
+        Compositor.blitWindow (c    => connection, 
+                               win  => exposeEvent.window,
+                               rend => rend);
 
         -- If we're exposing a window, expose the frame too (if it has one) and vice versa.
         if isFrame(exposeEvent.window) then
@@ -334,15 +341,18 @@ package body events is
     ---------------------------------------------------------------------------
     -- eventLoop
     ---------------------------------------------------------------------------
-    procedure eventLoop(connection : access xcb_connection_t; 
-                        rend : render.Renderer)
+    procedure eventLoop (connection : access xcb_connection_t; 
+                         rend       : Render.Renderer)
     is
         procedure free is new Ada.Unchecked_Deallocation (Object => xcb_generic_event_t, Name => events.eventPtr);
-        --focusedWindow : xcb_window_t;
+
         XCB_EVENT_MASK : constant := 2#0111_1111#;
-        event : events.eventPtr;
-        ignore : int;
+
+        event          : Events.eventPtr;
+        ignore         : int;
+
     begin
+        
         ignore := xcb_flush(connection);
 
         --focusWin := setup.getRootWindow(connection);
@@ -377,7 +387,7 @@ package body events is
                 --     null;
     
                 when CONST_XCB_EXPOSE =>
-                    events.handleExpose(connection, event);
+                    events.handleExpose(connection, event, rend);
                     null;
 
                 when CONST_XCB_CREATE_NOTIFY =>

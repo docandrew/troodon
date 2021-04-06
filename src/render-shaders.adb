@@ -341,6 +341,52 @@ package body Render.Shaders is
     end initLineShaders;
 
     ---------------------------------------------------------------------------
+    -- initWinShaders
+    ---------------------------------------------------------------------------
+    procedure initWinShaders is
+
+        win_vertex_shader_start : Symbol with Import;
+        win_vertex_shader_end   : Symbol with Import;
+        win_vertex_shader_size  : Symbol with Import;
+
+        winVertexShaderSize : Interfaces.C.size_t with
+            Import, Address => win_vertex_shader_size'Address;
+
+        win_fragment_shader_start : Symbol with Import;
+        win_fragment_shader_end   : Symbol with Import;
+        win_fragment_shader_size  : Symbol with Import;
+
+        winFragmentShaderSize : Interfaces.C.size_t with
+            Import, Address => win_fragment_shader_size'Address;
+    begin
+
+        winShaderProg := createShaderProgram (vertSource => win_vertex_shader_start'Address,
+                                               vertSize   => winVertexShaderSize,
+                                               fragSource => win_fragment_shader_start'Address,
+                                               fragSize   => winFragmentShaderSize);
+
+        if winShaderProg = 0 then
+            raise ShaderException with "Unable to load window shaders";
+        end if;
+
+        Ada.Text_IO.Put_Line("Troodon: Loaded Window Shaders");
+
+        winAttribCoord  := GLext.glGetAttribLocation  (program => winShaderProg,
+                                                        name    => Interfaces.C.To_C ("coord"));
+        winUniformOrtho := GLext.glGetUniformLocation (program => winShaderProg,
+                                                        name    => Interfaces.C.To_C ("ortho"));
+        winUniformTex   := GLext.glGetUniformLocation (program => winShaderProg,
+                                                        name    => Interfaces.C.To_C ("tex"));
+
+        if winAttribCoord  = -1 or
+           winUniformOrtho = -1 or
+           winUniformTex   = -1 then
+            raise ShaderException with "Unable to get shader variables from win program.";
+        end if;
+
+    end initWinShaders;
+
+    ---------------------------------------------------------------------------
     -- initShaders
     -- Load, compile and link the shaders used for OpenGL rendering
     ---------------------------------------------------------------------------
@@ -349,6 +395,7 @@ package body Render.Shaders is
         initTextShaders;
         initCircleShaders;
         initLineShaders;
+        initWinShaders;
     end initShaders;
 
     procedure teardownShaders is
@@ -356,6 +403,7 @@ package body Render.Shaders is
         GLext.glDeleteProgram (textShaderProg);
         GLext.glDeleteProgram (circleShaderProg);
         GLext.glDeleteProgram (lineShaderProg);
+        GLext.glDeleteProgram (winShaderProg);
     end teardownShaders;
 
 end Render.Shaders;

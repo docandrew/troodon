@@ -66,3 +66,22 @@ line_fragment_shader_start: incbin "shaders/line_fragment_shader.glsl"
 line_fragment_shader_end:   db 0
 line_fragment_shader_size:  dq $ - line_fragment_shader_start
 
+; -----------------------------------------------------------------------------
+; Window Vertex Shader
+; -----------------------------------------------------------------------------
+global win_vertex_shader_start
+global win_vertex_shader_end
+global win_vertex_shader_size
+win_vertex_shader_start: incbin "shaders/win_vertex_shader.glsl"
+win_vertex_shader_end:   db 0
+win_vertex_shader_size:  dq $ - win_vertex_shader_start
+
+; -----------------------------------------------------------------------------
+; Window Fragment Shader
+; -----------------------------------------------------------------------------
+global win_fragment_shader_start
+global win_fragment_shader_end
+global win_fragment_shader_size
+win_fragment_shader_start: incbin "shaders/win_fragment_shader.glsl"
+win_fragment_shader_end:   db 0
+win_fragment_shader_size:  dq $ - win_fragment_shader_start

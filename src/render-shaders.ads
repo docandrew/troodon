@@ -45,6 +45,15 @@ package Render.Shaders is
     lineUniformAA       : GL.GLint;
     lineVBO             : aliased GL.GLuint;
 
+    -- Compositor/Window Shader
+    winShaderProg       : GL.GLuint := 0;
+
+    winAttribCoord      : GL.GLint;
+
+    winUniformOrtho     : GL.GLint;
+    winUniformTex       : GL.GLint;
+    winVBO              : aliased GL.GLuint;
+
     ---------------------------------------------------------------------------
     -- Part of Troodon's philosophy is being distributed as a single
     -- executable. We bake shaders into the final binary and extract them

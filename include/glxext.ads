@@ -395,11 +395,11 @@ package glxext is
   --  
 
    type PFNGLXCREATECONTEXTATTRIBSARBPROC is access function
-        (arg1 : access X11_Xlib_h.Display;
-         arg2 : glx.ads.GLXFBConfig;
-         arg3 : glx.ads.GLXContext;
+        (arg1 : access Xlib.Display;
+         arg2 : GLX.GLXFBConfig;
+         arg3 : GLX.GLXContext;
          arg4 : int;
-         arg5 : access int) return glx.ads.GLXContext
+         arg5 : access int) return GLX.GLXContext
    with Convention => C;  -- /usr/include/GL/glxext.h:173
 
    type PFNGLXGETGPUIDSAMDPROC is access function (arg1 : unsigned; arg2 : access unsigned) return unsigned
@@ -408,63 +408,63 @@ package glxext is
    type PFNGLXGETGPUINFOAMDPROC is access function
         (arg1 : unsigned;
          arg2 : int;
-         arg3 : GL_gl_h.GLenum;
+         arg3 : GL.GLenum;
          arg4 : unsigned;
          arg5 : System.Address) return int
    with Convention => C;  -- /usr/include/GL/glxext.h:257
 
-   type PFNGLXGETCONTEXTGPUIDAMDPROC is access function (arg1 : glx.ads.GLXContext) return unsigned
+   type PFNGLXGETCONTEXTGPUIDAMDPROC is access function (arg1 : GLX.GLXContext) return unsigned
    with Convention => C;  -- /usr/include/GL/glxext.h:258
 
-   type PFNGLXCREATEASSOCIATEDCONTEXTAMDPROC is access function (arg1 : unsigned; arg2 : glx.ads.GLXContext) return glx.ads.GLXContext
+   type PFNGLXCREATEASSOCIATEDCONTEXTAMDPROC is access function (arg1 : unsigned; arg2 : GLX.GLXContext) return GLX.GLXContext
    with Convention => C;  -- /usr/include/GL/glxext.h:259
 
    type PFNGLXCREATEASSOCIATEDCONTEXTATTRIBSAMDPROC is access function
         (arg1 : unsigned;
-         arg2 : glx.ads.GLXContext;
-         arg3 : access int) return glx.ads.GLXContext
+         arg2 : GLX.GLXContext;
+         arg3 : access int) return GLX.GLXContext
    with Convention => C;  -- /usr/include/GL/glxext.h:260
 
-   type PFNGLXDELETEASSOCIATEDCONTEXTAMDPROC is access function (arg1 : glx.ads.GLXContext) return int
+   type PFNGLXDELETEASSOCIATEDCONTEXTAMDPROC is access function (arg1 : GLX.GLXContext) return int
    with Convention => C;  -- /usr/include/GL/glxext.h:261
 
-   type PFNGLXMAKEASSOCIATEDCONTEXTCURRENTAMDPROC is access function (arg1 : glx.ads.GLXContext) return int
+   type PFNGLXMAKEASSOCIATEDCONTEXTCURRENTAMDPROC is access function (arg1 : GLX.GLXContext) return int
    with Convention => C;  -- /usr/include/GL/glxext.h:262
 
-   type PFNGLXGETCURRENTASSOCIATEDCONTEXTAMDPROC is access function return glx.ads.GLXContext
+   type PFNGLXGETCURRENTASSOCIATEDCONTEXTAMDPROC is access function return GLX.GLXContext
    with Convention => C;  -- /usr/include/GL/glxext.h:263
 
    type PFNGLXBLITCONTEXTFRAMEBUFFERAMDPROC is access procedure
-        (arg1 : glx.ads.GLXContext;
-         arg2 : GL_gl_h.GLint;
-         arg3 : GL_gl_h.GLint;
-         arg4 : GL_gl_h.GLint;
-         arg5 : GL_gl_h.GLint;
-         arg6 : GL_gl_h.GLint;
-         arg7 : GL_gl_h.GLint;
-         arg8 : GL_gl_h.GLint;
-         arg9 : GL_gl_h.GLint;
-         arg10 : GL_gl_h.GLbitfield;
-         arg11 : GL_gl_h.GLenum)
+        (arg1 : GLX.GLXContext;
+         arg2 : GL.GLint;
+         arg3 : GL.GLint;
+         arg4 : GL.GLint;
+         arg5 : GL.GLint;
+         arg6 : GL.GLint;
+         arg7 : GL.GLint;
+         arg8 : GL.GLint;
+         arg9 : GL.GLint;
+         arg10 : GL.GLbitfield;
+         arg11 : GL.GLenum)
    with Convention => C;  -- /usr/include/GL/glxext.h:264
 
-   type PFNGLXGETCURRENTDISPLAYEXTPROC is access function return access X11_Xlib_h.Display
+   type PFNGLXGETCURRENTDISPLAYEXTPROC is access function return access Xlib.Display
    with Convention => C;  -- /usr/include/GL/glxext.h:317
 
    type PFNGLXQUERYCONTEXTINFOEXTPROC is access function
-        (arg1 : access X11_Xlib_h.Display;
-         arg2 : glx.ads.GLXContext;
+        (arg1 : access Xlib.Display;
+         arg2 : GLX.GLXContext;
          arg3 : int;
          arg4 : access int) return int
    with Convention => C;  -- /usr/include/GL/glxext.h:318
 
-   type PFNGLXGETCONTEXTIDEXTPROC is access function (arg1 : glx.ads.GLXContext) return glx.ads.GLXContextID
+   type PFNGLXGETCONTEXTIDEXTPROC is access function (arg1 : GLX.GLXContext) return GLX.GLXContextID
    with Convention => C;  -- /usr/include/GL/glxext.h:319
 
-   type PFNGLXIMPORTCONTEXTEXTPROC is access function (arg1 : access X11_Xlib_h.Display; arg2 : glx.ads.GLXContextID) return glx.ads.GLXContext
+   type PFNGLXIMPORTCONTEXTEXTPROC is access function (arg1 : access Xlib.Display; arg2 : GLX.GLXContextID) return GLX.GLXContext
    with Convention => C;  -- /usr/include/GL/glxext.h:320
 
-   type PFNGLXFREECONTEXTEXTPROC is access procedure (arg1 : access X11_Xlib_h.Display; arg2 : glx.ads.GLXContext)
+   type PFNGLXFREECONTEXTEXTPROC is access procedure (arg1 : access Xlib.Display; arg2 : GLX.GLXContext)
    with Convention => C;  -- /usr/include/GL/glxext.h:321
 
    --  skipped anonymous struct anon_107
@@ -473,30 +473,30 @@ package glxext is
       c_type : aliased int;  -- /usr/include/GL/glxext.h:343
       serial : aliased unsigned_long;  -- /usr/include/GL/glxext.h:344
       send_event : aliased int;  -- /usr/include/GL/glxext.h:345
-      the_display : access X11_Xlib_h.Display;  -- /usr/include/GL/glxext.h:346
+      the_display : access Xlib.Display;  -- /usr/include/GL/glxext.h:346
       extension : aliased int;  -- /usr/include/GL/glxext.h:347
       evtype : aliased int;  -- /usr/include/GL/glxext.h:348
-      window : aliased glx.ads.GLXDrawable;  -- /usr/include/GL/glxext.h:349
+      window : aliased GLX.GLXDrawable;  -- /usr/include/GL/glxext.h:349
       stereo_tree : aliased int;  -- /usr/include/GL/glxext.h:350
    end record
    with Convention => C_Pass_By_Copy;  -- /usr/include/GL/glxext.h:351
 
    type PFNGLXSWAPINTERVALEXTPROC is access procedure
-        (arg1 : access X11_Xlib_h.Display;
-         arg2 : glx.ads.GLXDrawable;
+        (arg1 : access Xlib.Display;
+         arg2 : GLX.GLXDrawable;
          arg3 : int)
    with Convention => C;  -- /usr/include/GL/glxext.h:361
 
    type PFNGLXBINDTEXIMAGEEXTPROC is access procedure
-        (arg1 : access X11_Xlib_h.Display;
-         arg2 : glx.ads.GLXDrawable;
+        (arg1 : access Xlib.Display;
+         arg2 : GLX.GLXDrawable;
          arg3 : int;
          arg4 : access int)
    with Convention => C;  -- /usr/include/GL/glxext.h:407
 
    type PFNGLXRELEASETEXIMAGEEXTPROC is access procedure
-        (arg1 : access X11_Xlib_h.Display;
-         arg2 : glx.ads.GLXDrawable;
+        (arg1 : access Xlib.Display;
+         arg2 : GLX.GLXDrawable;
          arg3 : int)
    with Convention => C;  -- /usr/include/GL/glxext.h:408
 
@@ -504,8 +504,8 @@ package glxext is
    with Convention => C;  -- /usr/include/GL/glxext.h:452
 
    type PFNGLXCOPYSUBBUFFERMESAPROC is access procedure
-        (arg1 : access X11_Xlib_h.Display;
-         arg2 : glx.ads.GLXDrawable;
+        (arg1 : access Xlib.Display;
+         arg2 : GLX.GLXDrawable;
          arg3 : int;
          arg4 : int;
          arg5 : int;
@@ -513,10 +513,10 @@ package glxext is
    with Convention => C;  -- /usr/include/GL/glxext.h:460
 
    type PFNGLXCREATEGLXPIXMAPMESAPROC is access function
-        (arg1 : access X11_Xlib_h.Display;
+        (arg1 : access Xlib.Display;
          arg2 : access Xutil.XVisualInfo;
-         arg3 : X11_X_h.Pixmap;
-         arg4 : X11_X_h.Colormap) return glx.ads.GLXPixmap
+         arg3 : X11.Pixmap;
+         arg4 : X11.Colormap) return GLX.GLXPixmap
    with Convention => C;  -- /usr/include/GL/glxext.h:468
 
    type PFNGLXQUERYCURRENTRENDERERINTEGERMESAPROC is access function (arg1 : int; arg2 : access unsigned) return int
@@ -526,7 +526,7 @@ package glxext is
    with Convention => C;  -- /usr/include/GL/glxext.h:488
 
    type PFNGLXQUERYRENDERERINTEGERMESAPROC is access function
-        (arg1 : access X11_Xlib_h.Display;
+        (arg1 : access Xlib.Display;
          arg2 : int;
          arg3 : int;
          arg4 : int;
@@ -534,16 +534,16 @@ package glxext is
    with Convention => C;  -- /usr/include/GL/glxext.h:489
 
    type PFNGLXQUERYRENDERERSTRINGMESAPROC is access function
-        (arg1 : access X11_Xlib_h.Display;
+        (arg1 : access Xlib.Display;
          arg2 : int;
          arg3 : int;
          arg4 : int) return Interfaces.C.Strings.chars_ptr
    with Convention => C;  -- /usr/include/GL/glxext.h:490
 
-   type PFNGLXRELEASEBUFFERSMESAPROC is access function (arg1 : access X11_Xlib_h.Display; arg2 : glx.ads.GLXDrawable) return int
+   type PFNGLXRELEASEBUFFERSMESAPROC is access function (arg1 : access Xlib.Display; arg2 : GLX.GLXDrawable) return int
    with Convention => C;  -- /usr/include/GL/glxext.h:501
 
-   type PFNGLXSET3DFXMODEMESAPROC is access function (arg1 : GL_gl_h.GLint) return GL_gl_h.GLboolean
+   type PFNGLXSET3DFXMODEMESAPROC is access function (arg1 : GL.GLint) return GL.GLboolean
    with Convention => C;  -- /usr/include/GL/glxext.h:511
 
    type PFNGLXGETSWAPINTERVALMESAPROC is access function return int
@@ -553,164 +553,164 @@ package glxext is
    with Convention => C;  -- /usr/include/GL/glxext.h:520
 
    type PFNGLXCOPYBUFFERSUBDATANVPROC is access procedure
-        (arg1 : access X11_Xlib_h.Display;
-         arg2 : glx.ads.GLXContext;
-         arg3 : glx.ads.GLXContext;
-         arg4 : GL_gl_h.GLenum;
-         arg5 : GL_gl_h.GLenum;
+        (arg1 : access Xlib.Display;
+         arg2 : GLX.GLXContext;
+         arg3 : GLX.GLXContext;
+         arg4 : GL.GLenum;
+         arg5 : GL.GLenum;
          arg6 : glext.GLintptr;
          arg7 : glext.GLintptr;
          arg8 : glext.GLsizeiptr)
    with Convention => C;  -- /usr/include/GL/glxext.h:529
 
    type PFNGLXNAMEDCOPYBUFFERSUBDATANVPROC is access procedure
-        (arg1 : access X11_Xlib_h.Display;
-         arg2 : glx.ads.GLXContext;
-         arg3 : glx.ads.GLXContext;
-         arg4 : GL_gl_h.GLuint;
-         arg5 : GL_gl_h.GLuint;
+        (arg1 : access Xlib.Display;
+         arg2 : GLX.GLXContext;
+         arg3 : GLX.GLXContext;
+         arg4 : GL.GLuint;
+         arg5 : GL.GLuint;
          arg6 : glext.GLintptr;
          arg7 : glext.GLintptr;
          arg8 : glext.GLsizeiptr)
    with Convention => C;  -- /usr/include/GL/glxext.h:530
 
    type PFNGLXCOPYIMAGESUBDATANVPROC is access procedure
-        (arg1 : access X11_Xlib_h.Display;
-         arg2 : glx.ads.GLXContext;
-         arg3 : GL_gl_h.GLuint;
-         arg4 : GL_gl_h.GLenum;
-         arg5 : GL_gl_h.GLint;
-         arg6 : GL_gl_h.GLint;
-         arg7 : GL_gl_h.GLint;
-         arg8 : GL_gl_h.GLint;
-         arg9 : glx.ads.GLXContext;
-         arg10 : GL_gl_h.GLuint;
-         arg11 : GL_gl_h.GLenum;
-         arg12 : GL_gl_h.GLint;
-         arg13 : GL_gl_h.GLint;
-         arg14 : GL_gl_h.GLint;
-         arg15 : GL_gl_h.GLint;
-         arg16 : GL_gl_h.GLsizei;
-         arg17 : GL_gl_h.GLsizei;
-         arg18 : GL_gl_h.GLsizei)
+        (arg1 : access Xlib.Display;
+         arg2 : GLX.GLXContext;
+         arg3 : GL.GLuint;
+         arg4 : GL.GLenum;
+         arg5 : GL.GLint;
+         arg6 : GL.GLint;
+         arg7 : GL.GLint;
+         arg8 : GL.GLint;
+         arg9 : GLX.GLXContext;
+         arg10 : GL.GLuint;
+         arg11 : GL.GLenum;
+         arg12 : GL.GLint;
+         arg13 : GL.GLint;
+         arg14 : GL.GLint;
+         arg15 : GL.GLint;
+         arg16 : GL.GLsizei;
+         arg17 : GL.GLsizei;
+         arg18 : GL.GLsizei)
    with Convention => C;  -- /usr/include/GL/glxext.h:539
 
    type PFNGLXDELAYBEFORESWAPNVPROC is access function
-        (arg1 : access X11_Xlib_h.Display;
-         arg2 : glx.ads.GLXDrawable;
-         arg3 : GL_gl_h.GLfloat) return int
+        (arg1 : access Xlib.Display;
+         arg2 : GLX.GLXDrawable;
+         arg3 : GL.GLfloat) return int
    with Convention => C;  -- /usr/include/GL/glxext.h:547
 
    type PFNGLXENUMERATEVIDEODEVICESNVPROC is access function
-        (arg1 : access X11_Xlib_h.Display;
+        (arg1 : access Xlib.Display;
          arg2 : int;
          arg3 : access int) return access unsigned
    with Convention => C;  -- /usr/include/GL/glxext.h:576
 
    type PFNGLXBINDVIDEODEVICENVPROC is access function
-        (arg1 : access X11_Xlib_h.Display;
+        (arg1 : access Xlib.Display;
          arg2 : unsigned;
          arg3 : unsigned;
          arg4 : access int) return int
    with Convention => C;  -- /usr/include/GL/glxext.h:577
 
    type PFNGLXJOINSWAPGROUPNVPROC is access function
-        (arg1 : access X11_Xlib_h.Display;
-         arg2 : glx.ads.GLXDrawable;
-         arg3 : GL_gl_h.GLuint) return int
+        (arg1 : access Xlib.Display;
+         arg2 : GLX.GLXDrawable;
+         arg3 : GL.GLuint) return int
    with Convention => C;  -- /usr/include/GL/glxext.h:591
 
    type PFNGLXBINDSWAPBARRIERNVPROC is access function
-        (arg1 : access X11_Xlib_h.Display;
-         arg2 : GL_gl_h.GLuint;
-         arg3 : GL_gl_h.GLuint) return int
+        (arg1 : access Xlib.Display;
+         arg2 : GL.GLuint;
+         arg3 : GL.GLuint) return int
    with Convention => C;  -- /usr/include/GL/glxext.h:592
 
    type PFNGLXQUERYSWAPGROUPNVPROC is access function
-        (arg1 : access X11_Xlib_h.Display;
-         arg2 : glx.ads.GLXDrawable;
-         arg3 : access GL_gl_h.GLuint;
-         arg4 : access GL_gl_h.GLuint) return int
+        (arg1 : access Xlib.Display;
+         arg2 : GLX.GLXDrawable;
+         arg3 : access GL.GLuint;
+         arg4 : access GL.GLuint) return int
    with Convention => C;  -- /usr/include/GL/glxext.h:593
 
    type PFNGLXQUERYMAXSWAPGROUPSNVPROC is access function
-        (arg1 : access X11_Xlib_h.Display;
+        (arg1 : access Xlib.Display;
          arg2 : int;
-         arg3 : access GL_gl_h.GLuint;
-         arg4 : access GL_gl_h.GLuint) return int
+         arg3 : access GL.GLuint;
+         arg4 : access GL.GLuint) return int
    with Convention => C;  -- /usr/include/GL/glxext.h:594
 
    type PFNGLXQUERYFRAMECOUNTNVPROC is access function
-        (arg1 : access X11_Xlib_h.Display;
+        (arg1 : access Xlib.Display;
          arg2 : int;
-         arg3 : access GL_gl_h.GLuint) return int
+         arg3 : access GL.GLuint) return int
    with Convention => C;  -- /usr/include/GL/glxext.h:595
 
-   type PFNGLXRESETFRAMECOUNTNVPROC is access function (arg1 : access X11_Xlib_h.Display; arg2 : int) return int
+   type PFNGLXRESETFRAMECOUNTNVPROC is access function (arg1 : access Xlib.Display; arg2 : int) return int
    with Convention => C;  -- /usr/include/GL/glxext.h:596
 
-   subtype GLXVideoCaptureDeviceNV is X11_X_h.XID;  -- /usr/include/GL/glxext.h:609
+   subtype GLXVideoCaptureDeviceNV is X11.XID;  -- /usr/include/GL/glxext.h:609
 
    type PFNGLXBINDVIDEOCAPTUREDEVICENVPROC is access function
-        (arg1 : access X11_Xlib_h.Display;
+        (arg1 : access Xlib.Display;
          arg2 : unsigned;
          arg3 : GLXVideoCaptureDeviceNV) return int
    with Convention => C;  -- /usr/include/GL/glxext.h:613
 
    type PFNGLXENUMERATEVIDEOCAPTUREDEVICESNVPROC is access function
-        (arg1 : access X11_Xlib_h.Display;
+        (arg1 : access Xlib.Display;
          arg2 : int;
          arg3 : access int) return access GLXVideoCaptureDeviceNV
    with Convention => C;  -- /usr/include/GL/glxext.h:614
 
-   type PFNGLXLOCKVIDEOCAPTUREDEVICENVPROC is access procedure (arg1 : access X11_Xlib_h.Display; arg2 : GLXVideoCaptureDeviceNV)
+   type PFNGLXLOCKVIDEOCAPTUREDEVICENVPROC is access procedure (arg1 : access Xlib.Display; arg2 : GLXVideoCaptureDeviceNV)
    with Convention => C;  -- /usr/include/GL/glxext.h:615
 
    type PFNGLXQUERYVIDEOCAPTUREDEVICENVPROC is access function
-        (arg1 : access X11_Xlib_h.Display;
+        (arg1 : access Xlib.Display;
          arg2 : GLXVideoCaptureDeviceNV;
          arg3 : int;
          arg4 : access int) return int
    with Convention => C;  -- /usr/include/GL/glxext.h:616
 
-   type PFNGLXRELEASEVIDEOCAPTUREDEVICENVPROC is access procedure (arg1 : access X11_Xlib_h.Display; arg2 : GLXVideoCaptureDeviceNV)
+   type PFNGLXRELEASEVIDEOCAPTUREDEVICENVPROC is access procedure (arg1 : access Xlib.Display; arg2 : GLXVideoCaptureDeviceNV)
    with Convention => C;  -- /usr/include/GL/glxext.h:617
 
    subtype GLXVideoDeviceNV is unsigned;  -- /usr/include/GL/glxext.h:629
 
    type PFNGLXGETVIDEODEVICENVPROC is access function
-        (arg1 : access X11_Xlib_h.Display;
+        (arg1 : access Xlib.Display;
          arg2 : int;
          arg3 : int;
          arg4 : access GLXVideoDeviceNV) return int
    with Convention => C;  -- /usr/include/GL/glxext.h:640
 
    type PFNGLXRELEASEVIDEODEVICENVPROC is access function
-        (arg1 : access X11_Xlib_h.Display;
+        (arg1 : access Xlib.Display;
          arg2 : int;
          arg3 : GLXVideoDeviceNV) return int
    with Convention => C;  -- /usr/include/GL/glxext.h:641
 
    type PFNGLXBINDVIDEOIMAGENVPROC is access function
-        (arg1 : access X11_Xlib_h.Display;
+        (arg1 : access Xlib.Display;
          arg2 : GLXVideoDeviceNV;
-         arg3 : glx.ads.GLXPbuffer;
+         arg3 : GLX.GLXPbuffer;
          arg4 : int) return int
    with Convention => C;  -- /usr/include/GL/glxext.h:642
 
-   type PFNGLXRELEASEVIDEOIMAGENVPROC is access function (arg1 : access X11_Xlib_h.Display; arg2 : glx.ads.GLXPbuffer) return int
+   type PFNGLXRELEASEVIDEOIMAGENVPROC is access function (arg1 : access Xlib.Display; arg2 : GLX.GLXPbuffer) return int
    with Convention => C;  -- /usr/include/GL/glxext.h:643
 
    type PFNGLXSENDPBUFFERTOVIDEONVPROC is access function
-        (arg1 : access X11_Xlib_h.Display;
-         arg2 : glx.ads.GLXPbuffer;
+        (arg1 : access Xlib.Display;
+         arg2 : GLX.GLXPbuffer;
          arg3 : int;
          arg4 : access unsigned_long;
-         arg5 : GL_gl_h.GLboolean) return int
+         arg5 : GL.GLboolean) return int
    with Convention => C;  -- /usr/include/GL/glxext.h:644
 
    type PFNGLXGETVIDEOINFONVPROC is access function
-        (arg1 : access X11_Xlib_h.Display;
+        (arg1 : access Xlib.Display;
          arg2 : int;
          arg3 : GLXVideoDeviceNV;
          arg4 : access unsigned_long;
@@ -722,31 +722,31 @@ package glxext is
   -- (as used in the GLX_OML_sync_control extension).  
   -- Fallback if nothing above works  
    type PFNGLXGETSYNCVALUESOMLPROC is access function
-        (arg1 : access X11_Xlib_h.Display;
-         arg2 : glx.ads.GLXDrawable;
+        (arg1 : access Xlib.Display;
+         arg2 : GLX.GLXDrawable;
          arg3 : access bits_stdint_intn_h.int64_t;
          arg4 : access bits_stdint_intn_h.int64_t;
          arg5 : access bits_stdint_intn_h.int64_t) return int
    with Convention => C;  -- /usr/include/GL/glxext.h:703
 
    type PFNGLXGETMSCRATEOMLPROC is access function
-        (arg1 : access X11_Xlib_h.Display;
-         arg2 : glx.ads.GLXDrawable;
+        (arg1 : access Xlib.Display;
+         arg2 : GLX.GLXDrawable;
          arg3 : access bits_stdint_intn_h.int32_t;
          arg4 : access bits_stdint_intn_h.int32_t) return int
    with Convention => C;  -- /usr/include/GL/glxext.h:704
 
    type PFNGLXSWAPBUFFERSMSCOMLPROC is access function
-        (arg1 : access X11_Xlib_h.Display;
-         arg2 : glx.ads.GLXDrawable;
+        (arg1 : access Xlib.Display;
+         arg2 : GLX.GLXDrawable;
          arg3 : bits_stdint_intn_h.int64_t;
          arg4 : bits_stdint_intn_h.int64_t;
          arg5 : bits_stdint_intn_h.int64_t) return bits_stdint_intn_h.int64_t
    with Convention => C;  -- /usr/include/GL/glxext.h:705
 
    type PFNGLXWAITFORMSCOMLPROC is access function
-        (arg1 : access X11_Xlib_h.Display;
-         arg2 : glx.ads.GLXDrawable;
+        (arg1 : access Xlib.Display;
+         arg2 : GLX.GLXDrawable;
          arg3 : bits_stdint_intn_h.int64_t;
          arg4 : bits_stdint_intn_h.int64_t;
          arg5 : bits_stdint_intn_h.int64_t;
@@ -756,50 +756,50 @@ package glxext is
    with Convention => C;  -- /usr/include/GL/glxext.h:706
 
    type PFNGLXWAITFORSBCOMLPROC is access function
-        (arg1 : access X11_Xlib_h.Display;
-         arg2 : glx.ads.GLXDrawable;
+        (arg1 : access Xlib.Display;
+         arg2 : GLX.GLXDrawable;
          arg3 : bits_stdint_intn_h.int64_t;
          arg4 : access bits_stdint_intn_h.int64_t;
          arg5 : access bits_stdint_intn_h.int64_t;
          arg6 : access bits_stdint_intn_h.int64_t) return int
    with Convention => C;  -- /usr/include/GL/glxext.h:707
 
-   subtype GLXPbufferSGIX is X11_X_h.XID;  -- /usr/include/GL/glxext.h:736
+   subtype GLXPbufferSGIX is X11.XID;  -- /usr/include/GL/glxext.h:736
 
-   type GLXFBConfigSGIX is access all glx.ads.uu_GLXFBConfigRec;  -- /usr/include/GL/glxext.h:748
+   type GLXFBConfigSGIX is access all GLX.uu_GLXFBConfigRec;  -- /usr/include/GL/glxext.h:748
 
    type PFNGLXGETFBCONFIGATTRIBSGIXPROC is access function
-        (arg1 : access X11_Xlib_h.Display;
+        (arg1 : access Xlib.Display;
          arg2 : GLXFBConfigSGIX;
          arg3 : int;
          arg4 : access int) return int
    with Convention => C;  -- /usr/include/GL/glxext.h:759
 
    type PFNGLXCHOOSEFBCONFIGSGIXPROC is access function
-        (arg1 : access X11_Xlib_h.Display;
+        (arg1 : access Xlib.Display;
          arg2 : int;
          arg3 : access int;
          arg4 : access int) return System.Address
    with Convention => C;  -- /usr/include/GL/glxext.h:760
 
    type PFNGLXCREATEGLXPIXMAPWITHCONFIGSGIXPROC is access function
-        (arg1 : access X11_Xlib_h.Display;
+        (arg1 : access Xlib.Display;
          arg2 : GLXFBConfigSGIX;
-         arg3 : X11_X_h.Pixmap) return glx.ads.GLXPixmap
+         arg3 : X11.Pixmap) return GLX.GLXPixmap
    with Convention => C;  -- /usr/include/GL/glxext.h:761
 
    type PFNGLXCREATECONTEXTWITHCONFIGSGIXPROC is access function
-        (arg1 : access X11_Xlib_h.Display;
+        (arg1 : access Xlib.Display;
          arg2 : GLXFBConfigSGIX;
          arg3 : int;
-         arg4 : glx.ads.GLXContext;
-         arg5 : int) return glx.ads.GLXContext
+         arg4 : GLX.GLXContext;
+         arg5 : int) return GLX.GLXContext
    with Convention => C;  -- /usr/include/GL/glxext.h:762
 
-   type PFNGLXGETVISUALFROMFBCONFIGSGIXPROC is access function (arg1 : access X11_Xlib_h.Display; arg2 : GLXFBConfigSGIX) return access Xutil.XVisualInfo
+   type PFNGLXGETVISUALFROMFBCONFIGSGIXPROC is access function (arg1 : access Xlib.Display; arg2 : GLXFBConfigSGIX) return access Xutil.XVisualInfo
    with Convention => C;  -- /usr/include/GL/glxext.h:763
 
-   type PFNGLXGETFBCONFIGFROMVISUALSGIXPROC is access function (arg1 : access X11_Xlib_h.Display; arg2 : access Xutil.XVisualInfo) return GLXFBConfigSGIX
+   type PFNGLXGETFBCONFIGFROMVISUALSGIXPROC is access function (arg1 : access Xlib.Display; arg2 : access Xutil.XVisualInfo) return GLXFBConfigSGIX
    with Convention => C;  -- /usr/include/GL/glxext.h:764
 
   -- Should be [GLX_HYPERPIPE_PIPE_NAME_LENGTH_SGIX]  
@@ -854,11 +854,11 @@ package glxext is
    end record
    with Convention => C_Pass_By_Copy;  -- /usr/include/GL/glxext.h:795
 
-   type PFNGLXQUERYHYPERPIPENETWORKSGIXPROC is access function (arg1 : access X11_Xlib_h.Display; arg2 : access int) return access GLXHyperpipeNetworkSGIX
+   type PFNGLXQUERYHYPERPIPENETWORKSGIXPROC is access function (arg1 : access Xlib.Display; arg2 : access int) return access GLXHyperpipeNetworkSGIX
    with Convention => C;  -- /usr/include/GL/glxext.h:806
 
    type PFNGLXHYPERPIPECONFIGSGIXPROC is access function
-        (arg1 : access X11_Xlib_h.Display;
+        (arg1 : access Xlib.Display;
          arg2 : int;
          arg3 : int;
          arg4 : access GLXHyperpipeConfigSGIX;
@@ -866,19 +866,19 @@ package glxext is
    with Convention => C;  -- /usr/include/GL/glxext.h:807
 
    type PFNGLXQUERYHYPERPIPECONFIGSGIXPROC is access function
-        (arg1 : access X11_Xlib_h.Display;
+        (arg1 : access Xlib.Display;
          arg2 : int;
          arg3 : access int) return access GLXHyperpipeConfigSGIX
    with Convention => C;  -- /usr/include/GL/glxext.h:808
 
-   type PFNGLXDESTROYHYPERPIPECONFIGSGIXPROC is access function (arg1 : access X11_Xlib_h.Display; arg2 : int) return int
+   type PFNGLXDESTROYHYPERPIPECONFIGSGIXPROC is access function (arg1 : access Xlib.Display; arg2 : int) return int
    with Convention => C;  -- /usr/include/GL/glxext.h:809
 
-   type PFNGLXBINDHYPERPIPESGIXPROC is access function (arg1 : access X11_Xlib_h.Display; arg2 : int) return int
+   type PFNGLXBINDHYPERPIPESGIXPROC is access function (arg1 : access Xlib.Display; arg2 : int) return int
    with Convention => C;  -- /usr/include/GL/glxext.h:810
 
    type PFNGLXQUERYHYPERPIPEBESTATTRIBSGIXPROC is access function
-        (arg1 : access X11_Xlib_h.Display;
+        (arg1 : access Xlib.Display;
          arg2 : int;
          arg3 : int;
          arg4 : int;
@@ -887,7 +887,7 @@ package glxext is
    with Convention => C;  -- /usr/include/GL/glxext.h:811
 
    type PFNGLXHYPERPIPEATTRIBSGIXPROC is access function
-        (arg1 : access X11_Xlib_h.Display;
+        (arg1 : access Xlib.Display;
          arg2 : int;
          arg3 : int;
          arg4 : int;
@@ -895,7 +895,7 @@ package glxext is
    with Convention => C;  -- /usr/include/GL/glxext.h:812
 
    type PFNGLXQUERYHYPERPIPEATTRIBSGIXPROC is access function
-        (arg1 : access X11_Xlib_h.Display;
+        (arg1 : access Xlib.Display;
          arg2 : int;
          arg3 : int;
          arg4 : int;
@@ -903,62 +903,62 @@ package glxext is
    with Convention => C;  -- /usr/include/GL/glxext.h:813
 
    type PFNGLXCREATEGLXPBUFFERSGIXPROC is access function
-        (arg1 : access X11_Xlib_h.Display;
+        (arg1 : access Xlib.Display;
          arg2 : GLXFBConfigSGIX;
          arg3 : unsigned;
          arg4 : unsigned;
          arg5 : access int) return GLXPbufferSGIX
    with Convention => C;  -- /usr/include/GL/glxext.h:853
 
-   type PFNGLXDESTROYGLXPBUFFERSGIXPROC is access procedure (arg1 : access X11_Xlib_h.Display; arg2 : GLXPbufferSGIX)
+   type PFNGLXDESTROYGLXPBUFFERSGIXPROC is access procedure (arg1 : access Xlib.Display; arg2 : GLXPbufferSGIX)
    with Convention => C;  -- /usr/include/GL/glxext.h:854
 
    type PFNGLXQUERYGLXPBUFFERSGIXPROC is access procedure
-        (arg1 : access X11_Xlib_h.Display;
+        (arg1 : access Xlib.Display;
          arg2 : GLXPbufferSGIX;
          arg3 : int;
          arg4 : access unsigned)
    with Convention => C;  -- /usr/include/GL/glxext.h:855
 
    type PFNGLXSELECTEVENTSGIXPROC is access procedure
-        (arg1 : access X11_Xlib_h.Display;
-         arg2 : glx.ads.GLXDrawable;
+        (arg1 : access Xlib.Display;
+         arg2 : GLX.GLXDrawable;
          arg3 : unsigned_long)
    with Convention => C;  -- /usr/include/GL/glxext.h:856
 
    type PFNGLXGETSELECTEDEVENTSGIXPROC is access procedure
-        (arg1 : access X11_Xlib_h.Display;
-         arg2 : glx.ads.GLXDrawable;
+        (arg1 : access Xlib.Display;
+         arg2 : GLX.GLXDrawable;
          arg3 : access unsigned_long)
    with Convention => C;  -- /usr/include/GL/glxext.h:857
 
    type PFNGLXBINDSWAPBARRIERSGIXPROC is access procedure
-        (arg1 : access X11_Xlib_h.Display;
-         arg2 : glx.ads.GLXDrawable;
+        (arg1 : access Xlib.Display;
+         arg2 : GLX.GLXDrawable;
          arg3 : int)
    with Convention => C;  -- /usr/include/GL/glxext.h:869
 
    type PFNGLXQUERYMAXSWAPBARRIERSSGIXPROC is access function
-        (arg1 : access X11_Xlib_h.Display;
+        (arg1 : access Xlib.Display;
          arg2 : int;
          arg3 : access int) return int
    with Convention => C;  -- /usr/include/GL/glxext.h:870
 
    type PFNGLXJOINSWAPGROUPSGIXPROC is access procedure
-        (arg1 : access X11_Xlib_h.Display;
-         arg2 : glx.ads.GLXDrawable;
-         arg3 : glx.ads.GLXDrawable)
+        (arg1 : access Xlib.Display;
+         arg2 : GLX.GLXDrawable;
+         arg3 : GLX.GLXDrawable)
    with Convention => C;  -- /usr/include/GL/glxext.h:879
 
    type PFNGLXBINDCHANNELTOWINDOWSGIXPROC is access function
-        (arg1 : access X11_Xlib_h.Display;
+        (arg1 : access Xlib.Display;
          arg2 : int;
          arg3 : int;
-         arg4 : X11_X_h.Window) return int
+         arg4 : X11.Window) return int
    with Convention => C;  -- /usr/include/GL/glxext.h:889
 
    type PFNGLXCHANNELRECTSGIXPROC is access function
-        (arg1 : access X11_Xlib_h.Display;
+        (arg1 : access Xlib.Display;
          arg2 : int;
          arg3 : int;
          arg4 : int;
@@ -968,7 +968,7 @@ package glxext is
    with Convention => C;  -- /usr/include/GL/glxext.h:890
 
    type PFNGLXQUERYCHANNELRECTSGIXPROC is access function
-        (arg1 : access X11_Xlib_h.Display;
+        (arg1 : access Xlib.Display;
          arg2 : int;
          arg3 : int;
          arg4 : access int;
@@ -978,7 +978,7 @@ package glxext is
    with Convention => C;  -- /usr/include/GL/glxext.h:891
 
    type PFNGLXQUERYCHANNELDELTASSGIXPROC is access function
-        (arg1 : access X11_Xlib_h.Display;
+        (arg1 : access Xlib.Display;
          arg2 : int;
          arg3 : int;
          arg4 : access int;
@@ -988,28 +988,28 @@ package glxext is
    with Convention => C;  -- /usr/include/GL/glxext.h:892
 
    type PFNGLXCHANNELRECTSYNCSGIXPROC is access function
-        (arg1 : access X11_Xlib_h.Display;
+        (arg1 : access Xlib.Display;
          arg2 : int;
          arg3 : int;
-         arg4 : GL_gl_h.GLenum) return int
+         arg4 : GL.GLenum) return int
    with Convention => C;  -- /usr/include/GL/glxext.h:893
 
-   subtype GLXVideoSourceSGIX is X11_X_h.XID;  -- /usr/include/GL/glxext.h:905
+   subtype GLXVideoSourceSGIX is X11.XID;  -- /usr/include/GL/glxext.h:905
 
    type PFNGLXCUSHIONSGIPROC is access procedure
-        (arg1 : access X11_Xlib_h.Display;
-         arg2 : X11_X_h.Window;
+        (arg1 : access Xlib.Display;
+         arg2 : X11.Window;
          arg3 : float)
    with Convention => C;  -- /usr/include/GL/glxext.h:923
 
    type PFNGLXMAKECURRENTREADSGIPROC is access function
-        (arg1 : access X11_Xlib_h.Display;
-         arg2 : glx.ads.GLXDrawable;
-         arg3 : glx.ads.GLXDrawable;
-         arg4 : glx.ads.GLXContext) return int
+        (arg1 : access Xlib.Display;
+         arg2 : GLX.GLXDrawable;
+         arg3 : GLX.GLXDrawable;
+         arg4 : GLX.GLXContext) return int
    with Convention => C;  -- /usr/include/GL/glxext.h:931
 
-   type PFNGLXGETCURRENTREADDRAWABLESGIPROC is access function return glx.ads.GLXDrawable
+   type PFNGLXGETCURRENTREADDRAWABLESGIPROC is access function return GLX.GLXDrawable
    with Convention => C;  -- /usr/include/GL/glxext.h:932
 
    type PFNGLXSWAPINTERVALSGIPROC is access function (arg1 : int) return int
@@ -1025,9 +1025,9 @@ package glxext is
    with Convention => C;  -- /usr/include/GL/glxext.h:950
 
    type PFNGLXGETTRANSPARENTINDEXSUNPROC is access function
-        (arg1 : access X11_Xlib_h.Display;
-         arg2 : X11_X_h.Window;
-         arg3 : X11_X_h.Window;
+        (arg1 : access Xlib.Display;
+         arg2 : X11.Window;
+         arg3 : X11.Window;
          arg4 : access unsigned_long) return int
    with Convention => C;  -- /usr/include/GL/glxext.h:959
 

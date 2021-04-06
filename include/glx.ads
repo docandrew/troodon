@@ -572,7 +572,9 @@ package glx is
         External_Name => "glXGetProcAddressARB";
 
   -- GLX 1.4 and later  
-   function glXGetProcAddress (procname : access GL.GLubyte) return access procedure  -- /usr/include/GL/glx.h:320
+  --Troodon: change procname type and return type
+   function glXGetProcAddress (procname : access Interfaces.C.char) return uu_GLXextFuncPtr  -- /usr/include/GL/glx.h:320
+   --function glXGetProcAddress (procname : access GL.GLubyte) return access procedure  -- /usr/include/GL/glx.h:320
    with Import => True, 
         Convention => C, 
         External_Name => "glXGetProcAddress";

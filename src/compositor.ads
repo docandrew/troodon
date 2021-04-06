@@ -1,5 +1,7 @@
 with xcb; use xcb;
+with xproto;
 
+with GLX;
 with Render;
 
 -------------------------------------------------------------------------------
@@ -12,8 +14,24 @@ with Render;
 -- default compositing functionality.
 -------------------------------------------------------------------------------
 package Compositor is
+    
     CompositorException : exception;
+    
+    overlayWindow   : xproto.xcb_window_t;
+    overlayDrawable : GLX.GLXDrawable;
 
-    procedure initCompositor(c    : access xcb_connection_t;
-                             rend : Render.Renderer);
+    ---------------------------------------------------------------------------
+    -- initCompositor
+    -- Initialize the compositor
+    ---------------------------------------------------------------------------
+    procedure initCompositor (c    : access xcb.xcb_connection_t;
+                              rend : Render.Renderer);
+
+    ---------------------------------------------------------------------------
+    -- blitWindow
+    -- Take the off-screen pixbuf of a window and draw it to the overlay
+    ---------------------------------------------------------------------------
+    procedure blitWindow (c    : access xcb.xcb_connection_t;
+                          rend : Render.Renderer;
+                          win  : xproto.xcb_window_t);
 end Compositor;
