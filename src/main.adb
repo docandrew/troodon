@@ -23,22 +23,26 @@ with Taskbar;
 procedure Main is
     use Render;
 
-    display    : access Xlib.Display;
-    connection : access xcb.xcb_connection_t;
-    ignore     : int;
-    rend       : render.Renderer;
+    display       : access Xlib.Display;
+    connection    : access xcb.xcb_connection_t;
+    ignore        : int;
+    rend          : render.Renderer;
 begin
     -- @TODO perform a check for required libraries, and offer helpful
     --  suggestions for what the user needs to install and how, depending on
     --  their distro.
     -- We can do that with:
     -- $ LD_TRACE_LOADED_OBJECTS=1 ./troodon
-    -- @TODO move this, make sure we can connect to the X server before bothering
-    -- with loading fonts, shaders etc.
 
     display        := Setup.initXlib;
     connection     := Setup.initXcb (display);
-    rend           := Render.initRendering (connection, display);
+    
+    if not Setup.checkExtensions (connection) then
+        Ada.Command_Line.Set_Exit_Status (1);
+        return;
+    end if;
+
+    rend := Render.initRendering (connection, display);
 
     Compositor.initCompositor (connection, rend);
 

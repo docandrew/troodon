@@ -13,17 +13,17 @@ package xcb_xinerama is
    XCB_XINERAMA_MAJOR_VERSION : constant := 1;  --  /usr/include/xcb/xinerama.h:22
    XCB_XINERAMA_MINOR_VERSION : constant := 1;  --  /usr/include/xcb/xinerama.h:23
 
-   XCB_XINERAMA_QUERY_VERSION : constant := 0;  --  /usr/include/xcb/xinerama.h:54
+   CONST_XCB_XINERAMA_QUERY_VERSION : constant := 0;  --  /usr/include/xcb/xinerama.h:54
 
-   XCB_XINERAMA_GET_STATE : constant := 1;  --  /usr/include/xcb/xinerama.h:87
+   CONST_XCB_XINERAMA_GET_STATE : constant := 1;  --  /usr/include/xcb/xinerama.h:87
 
-   XCB_XINERAMA_GET_SCREEN_COUNT : constant := 2;  --  /usr/include/xcb/xinerama.h:118
+   CONST_XCB_XINERAMA_GET_SCREEN_COUNT : constant := 2;  --  /usr/include/xcb/xinerama.h:118
 
-   XCB_XINERAMA_GET_SCREEN_SIZE : constant := 3;  --  /usr/include/xcb/xinerama.h:149
+   CONST_XCB_XINERAMA_GET_SCREEN_SIZE : constant := 3;  --  /usr/include/xcb/xinerama.h:149
 
-   XCB_XINERAMA_IS_ACTIVE : constant := 4;  --  /usr/include/xcb/xinerama.h:184
+   CONST_XCB_XINERAMA_IS_ACTIVE : constant := 4;  --  /usr/include/xcb/xinerama.h:184
 
-   XCB_XINERAMA_QUERY_SCREENS : constant := 5;  --  /usr/include/xcb/xinerama.h:214
+   CONST_XCB_XINERAMA_QUERY_SCREENS : constant := 5;  --  /usr/include/xcb/xinerama.h:214
 
    xcb_xinerama_id : aliased xcb.xcb_extension_t  -- /usr/include/xcb/xinerama.h:25
    with Import => True, 

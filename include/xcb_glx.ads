@@ -11,244 +11,244 @@ with Interfaces.C.Strings;
 
 package xcb_glx is
 
-   XCB_GLX_MAJOR_VERSION : constant := 1;  --  /usr/include/xcb/glx.h:22
-   XCB_GLX_MINOR_VERSION : constant := 4;  --  /usr/include/xcb/glx.h:23
+   CONST_XCB_GLX_MAJOR_VERSION : constant := 1;  --  /usr/include/xcb/glx.h:22
+   CONST_XCB_GLX_MINOR_VERSION : constant := 4;  --  /usr/include/xcb/glx.h:23
 
-   XCB_GLX_GENERIC : constant := -1;  --  /usr/include/xcb/glx.h:138
+   CONST_XCB_GLX_GENERIC : constant := -1;  --  /usr/include/xcb/glx.h:138
 
-   XCB_GLX_BAD_CONTEXT : constant := 0;  --  /usr/include/xcb/glx.h:154
+   CONST_XCB_GLX_BAD_CONTEXT : constant := 0;  --  /usr/include/xcb/glx.h:154
 
-   XCB_GLX_BAD_CONTEXT_STATE : constant := 1;  --  /usr/include/xcb/glx.h:159
+   CONST_XCB_GLX_BAD_CONTEXT_STATE : constant := 1;  --  /usr/include/xcb/glx.h:159
 
-   XCB_GLX_BAD_DRAWABLE : constant := 2;  --  /usr/include/xcb/glx.h:164
+   CONST_XCB_GLX_BAD_DRAWABLE : constant := 2;  --  /usr/include/xcb/glx.h:164
 
-   XCB_GLX_BAD_PIXMAP : constant := 3;  --  /usr/include/xcb/glx.h:169
+   CONST_XCB_GLX_BAD_PIXMAP : constant := 3;  --  /usr/include/xcb/glx.h:169
 
-   XCB_GLX_BAD_CONTEXT_TAG : constant := 4;  --  /usr/include/xcb/glx.h:174
+   CONST_XCB_GLX_BAD_CONTEXT_TAG : constant := 4;  --  /usr/include/xcb/glx.h:174
 
-   XCB_GLX_BAD_CURRENT_WINDOW : constant := 5;  --  /usr/include/xcb/glx.h:179
+   CONST_XCB_GLX_BAD_CURRENT_WINDOW : constant := 5;  --  /usr/include/xcb/glx.h:179
 
-   XCB_GLX_BAD_RENDER_REQUEST : constant := 6;  --  /usr/include/xcb/glx.h:184
+   CONST_XCB_GLX_BAD_RENDER_REQUEST : constant := 6;  --  /usr/include/xcb/glx.h:184
 
-   XCB_GLX_BAD_LARGE_REQUEST : constant := 7;  --  /usr/include/xcb/glx.h:189
+   CONST_XCB_GLX_BAD_LARGE_REQUEST : constant := 7;  --  /usr/include/xcb/glx.h:189
 
-   XCB_GLX_UNSUPPORTED_PRIVATE_REQUEST : constant := 8;  --  /usr/include/xcb/glx.h:194
+   CONST_XCB_GLX_UNSUPPORTED_PRIVATE_REQUEST : constant := 8;  --  /usr/include/xcb/glx.h:194
 
-   XCB_GLX_BAD_FB_CONFIG : constant := 9;  --  /usr/include/xcb/glx.h:199
+   CONST_XCB_GLX_BAD_FB_CONFIG : constant := 9;  --  /usr/include/xcb/glx.h:199
 
-   XCB_GLX_BAD_PBUFFER : constant := 10;  --  /usr/include/xcb/glx.h:204
+   CONST_XCB_GLX_BAD_PBUFFER : constant := 10;  --  /usr/include/xcb/glx.h:204
 
-   XCB_GLX_BAD_CURRENT_DRAWABLE : constant := 11;  --  /usr/include/xcb/glx.h:209
+   CONST_XCB_GLX_BAD_CURRENT_DRAWABLE : constant := 11;  --  /usr/include/xcb/glx.h:209
 
-   XCB_GLX_BAD_WINDOW : constant := 12;  --  /usr/include/xcb/glx.h:214
+   CONST_XCB_GLX_BAD_WINDOW : constant := 12;  --  /usr/include/xcb/glx.h:214
 
-   XCB_GLX_GLX_BAD_PROFILE_ARB : constant := 13;  --  /usr/include/xcb/glx.h:219
+   CONST_XCB_GLX_GLX_BAD_PROFILE_ARB : constant := 13;  --  /usr/include/xcb/glx.h:219
 
-   XCB_GLX_PBUFFER_CLOBBER : constant := 0;  --  /usr/include/xcb/glx.h:224
+   CONST_XCB_GLX_PBUFFER_CLOBBER : constant := 0;  --  /usr/include/xcb/glx.h:224
 
-   XCB_GLX_BUFFER_SWAP_COMPLETE : constant := 1;  --  /usr/include/xcb/glx.h:247
+   CONST_XCB_GLX_BUFFER_SWAP_COMPLETE : constant := 1;  --  /usr/include/xcb/glx.h:247
 
-   XCB_GLX_RENDER : constant := 1;  --  /usr/include/xcb/glx.h:277
+   CONST_XCB_GLX_RENDER : constant := 1;  --  /usr/include/xcb/glx.h:277
 
-   XCB_GLX_RENDER_LARGE : constant := 2;  --  /usr/include/xcb/glx.h:290
+   CONST_XCB_GLX_RENDER_LARGE : constant := 2;  --  /usr/include/xcb/glx.h:290
 
-   XCB_GLX_CREATE_CONTEXT : constant := 3;  --  /usr/include/xcb/glx.h:306
+   CONST_XCB_GLX_CREATE_CONTEXT : constant := 3;  --  /usr/include/xcb/glx.h:306
 
-   XCB_GLX_DESTROY_CONTEXT : constant := 4;  --  /usr/include/xcb/glx.h:324
+   CONST_XCB_GLX_DESTROY_CONTEXT : constant := 4;  --  /usr/include/xcb/glx.h:324
 
-   XCB_GLX_MAKE_CURRENT : constant := 5;  --  /usr/include/xcb/glx.h:344
+   CONST_XCB_GLX_MAKE_CURRENT : constant := 5;  --  /usr/include/xcb/glx.h:344
 
-   XCB_GLX_IS_DIRECT : constant := 6;  --  /usr/include/xcb/glx.h:378
+   CONST_XCB_GLX_IS_DIRECT : constant := 6;  --  /usr/include/xcb/glx.h:378
 
-   XCB_GLX_QUERY_VERSION : constant := 7;  --  /usr/include/xcb/glx.h:410
+   CONST_XCB_GLX_QUERY_VERSION : constant := 7;  --  /usr/include/xcb/glx.h:410
 
-   XCB_GLX_WAIT_GL : constant := 8;  --  /usr/include/xcb/glx.h:437
+   CONST_XCB_GLX_WAIT_GL : constant := 8;  --  /usr/include/xcb/glx.h:437
 
-   XCB_GLX_WAIT_X : constant := 9;  --  /usr/include/xcb/glx.h:450
+   CONST_XCB_GLX_WAIT_X : constant := 9;  --  /usr/include/xcb/glx.h:450
 
-   XCB_GLX_COPY_CONTEXT : constant := 10;  --  /usr/include/xcb/glx.h:463
+   CONST_XCB_GLX_COPY_CONTEXT : constant := 10;  --  /usr/include/xcb/glx.h:463
 
-   XCB_GLX_SWAP_BUFFERS : constant := 11;  --  /usr/include/xcb/glx.h:503
+   CONST_XCB_GLX_SWAP_BUFFERS : constant := 11;  --  /usr/include/xcb/glx.h:503
 
-   XCB_GLX_USE_X_FONT : constant := 12;  --  /usr/include/xcb/glx.h:517
+   CONST_XCB_GLX_USE_X_FONT : constant := 12;  --  /usr/include/xcb/glx.h:517
 
-   XCB_GLX_CREATE_GLX_PIXMAP : constant := 13;  --  /usr/include/xcb/glx.h:534
+   CONST_XCB_GLX_CREATE_GLX_PIXMAP : constant := 13;  --  /usr/include/xcb/glx.h:534
 
-   XCB_GLX_GET_VISUAL_CONFIGS : constant := 14;  --  /usr/include/xcb/glx.h:557
+   CONST_XCB_GLX_GET_VISUAL_CONFIGS : constant := 14;  --  /usr/include/xcb/glx.h:557
 
-   XCB_GLX_DESTROY_GLX_PIXMAP : constant := 15;  --  /usr/include/xcb/glx.h:583
+   CONST_XCB_GLX_DESTROY_GLX_PIXMAP : constant := 15;  --  /usr/include/xcb/glx.h:583
 
-   XCB_GLX_VENDOR_PRIVATE : constant := 16;  --  /usr/include/xcb/glx.h:596
+   CONST_XCB_GLX_VENDOR_PRIVATE : constant := 16;  --  /usr/include/xcb/glx.h:596
 
-   XCB_GLX_VENDOR_PRIVATE_WITH_REPLY : constant := 17;  --  /usr/include/xcb/glx.h:617
+   CONST_XCB_GLX_VENDOR_PRIVATE_WITH_REPLY : constant := 17;  --  /usr/include/xcb/glx.h:617
 
-   XCB_GLX_QUERY_EXTENSIONS_STRING : constant := 18;  --  /usr/include/xcb/glx.h:650
+   CONST_XCB_GLX_QUERY_EXTENSIONS_STRING : constant := 18;  --  /usr/include/xcb/glx.h:650
 
-   XCB_GLX_QUERY_SERVER_STRING : constant := 19;  --  /usr/include/xcb/glx.h:683
+   CONST_XCB_GLX_QUERY_SERVER_STRING : constant := 19;  --  /usr/include/xcb/glx.h:683
 
-   XCB_GLX_CLIENT_INFO : constant := 20;  --  /usr/include/xcb/glx.h:710
+   CONST_XCB_GLX_CLIENT_INFO : constant := 20;  --  /usr/include/xcb/glx.h:710
 
-   XCB_GLX_GET_FB_CONFIGS : constant := 21;  --  /usr/include/xcb/glx.h:732
+   CONST_XCB_GLX_GET_FB_CONFIGS : constant := 21;  --  /usr/include/xcb/glx.h:732
 
-   XCB_GLX_CREATE_PIXMAP : constant := 22;  --  /usr/include/xcb/glx.h:758
+   CONST_XCB_GLX_CREATE_PIXMAP : constant := 22;  --  /usr/include/xcb/glx.h:758
 
-   XCB_GLX_DESTROY_PIXMAP : constant := 23;  --  /usr/include/xcb/glx.h:775
+   CONST_XCB_GLX_DESTROY_PIXMAP : constant := 23;  --  /usr/include/xcb/glx.h:775
 
-   XCB_GLX_CREATE_NEW_CONTEXT : constant := 24;  --  /usr/include/xcb/glx.h:788
+   CONST_XCB_GLX_CREATE_NEW_CONTEXT : constant := 24;  --  /usr/include/xcb/glx.h:788
 
-   XCB_GLX_QUERY_CONTEXT : constant := 25;  --  /usr/include/xcb/glx.h:814
+   CONST_XCB_GLX_QUERY_CONTEXT : constant := 25;  --  /usr/include/xcb/glx.h:814
 
-   XCB_GLX_MAKE_CONTEXT_CURRENT : constant := 26;  --  /usr/include/xcb/glx.h:846
+   CONST_XCB_GLX_MAKE_CONTEXT_CURRENT : constant := 26;  --  /usr/include/xcb/glx.h:846
 
-   XCB_GLX_CREATE_PBUFFER : constant := 27;  --  /usr/include/xcb/glx.h:874
+   CONST_XCB_GLX_CREATE_PBUFFER : constant := 27;  --  /usr/include/xcb/glx.h:874
 
-   XCB_GLX_DESTROY_PBUFFER : constant := 28;  --  /usr/include/xcb/glx.h:890
+   CONST_XCB_GLX_DESTROY_PBUFFER : constant := 28;  --  /usr/include/xcb/glx.h:890
 
-   XCB_GLX_GET_DRAWABLE_ATTRIBUTES : constant := 29;  --  /usr/include/xcb/glx.h:910
+   CONST_XCB_GLX_GET_DRAWABLE_ATTRIBUTES : constant := 29;  --  /usr/include/xcb/glx.h:910
 
-   XCB_GLX_CHANGE_DRAWABLE_ATTRIBUTES : constant := 30;  --  /usr/include/xcb/glx.h:935
+   CONST_XCB_GLX_CHANGE_DRAWABLE_ATTRIBUTES : constant := 30;  --  /usr/include/xcb/glx.h:935
 
-   XCB_GLX_CREATE_WINDOW : constant := 31;  --  /usr/include/xcb/glx.h:949
+   CONST_XCB_GLX_CREATE_WINDOW : constant := 31;  --  /usr/include/xcb/glx.h:949
 
-   XCB_GLX_DELETE_WINDOW : constant := 32;  --  /usr/include/xcb/glx.h:966
+   CONST_XCB_GLX_DELETE_WINDOW : constant := 32;  --  /usr/include/xcb/glx.h:966
 
-   XCB_GLX_SET_CLIENT_INFO_ARB : constant := 33;  --  /usr/include/xcb/glx.h:979
+   CONST_XCB_GLX_SET_CLIENT_INFO_ARB : constant := 33;  --  /usr/include/xcb/glx.h:979
 
-   XCB_GLX_CREATE_CONTEXT_ATTRIBS_ARB : constant := 34;  --  /usr/include/xcb/glx.h:996
+   CONST_XCB_GLX_CREATE_CONTEXT_ATTRIBS_ARB : constant := 34;  --  /usr/include/xcb/glx.h:996
 
-   XCB_GLX_SET_CLIENT_INFO_2ARB : constant := 35;  --  /usr/include/xcb/glx.h:1015
+   CONST_XCB_GLX_SET_CLIENT_INFO_2ARB : constant := 35;  --  /usr/include/xcb/glx.h:1015
 
-   XCB_GLX_NEW_LIST : constant := 101;  --  /usr/include/xcb/glx.h:1032
+   CONST_XCB_GLX_NEW_LIST : constant := 101;  --  /usr/include/xcb/glx.h:1032
 
-   XCB_GLX_END_LIST : constant := 102;  --  /usr/include/xcb/glx.h:1047
+   CONST_XCB_GLX_END_LIST : constant := 102;  --  /usr/include/xcb/glx.h:1047
 
-   XCB_GLX_DELETE_LISTS : constant := 103;  --  /usr/include/xcb/glx.h:1060
+   CONST_XCB_GLX_DELETE_LISTS : constant := 103;  --  /usr/include/xcb/glx.h:1060
 
-   XCB_GLX_GEN_LISTS : constant := 104;  --  /usr/include/xcb/glx.h:1082
+   CONST_XCB_GLX_GEN_LISTS : constant := 104;  --  /usr/include/xcb/glx.h:1082
 
-   XCB_GLX_FEEDBACK_BUFFER : constant := 105;  --  /usr/include/xcb/glx.h:1107
+   CONST_XCB_GLX_FEEDBACK_BUFFER : constant := 105;  --  /usr/include/xcb/glx.h:1107
 
-   XCB_GLX_SELECT_BUFFER : constant := 106;  --  /usr/include/xcb/glx.h:1122
+   CONST_XCB_GLX_SELECT_BUFFER : constant := 106;  --  /usr/include/xcb/glx.h:1122
 
-   XCB_GLX_RENDER_MODE : constant := 107;  --  /usr/include/xcb/glx.h:1143
+   CONST_XCB_GLX_RENDER_MODE : constant := 107;  --  /usr/include/xcb/glx.h:1143
 
-   XCB_GLX_FINISH : constant := 108;  --  /usr/include/xcb/glx.h:1184
+   CONST_XCB_GLX_FINISH : constant := 108;  --  /usr/include/xcb/glx.h:1184
 
-   XCB_GLX_PIXEL_STOREF : constant := 109;  --  /usr/include/xcb/glx.h:1207
+   CONST_XCB_GLX_PIXEL_STOREF : constant := 109;  --  /usr/include/xcb/glx.h:1207
 
-   XCB_GLX_PIXEL_STOREI : constant := 110;  --  /usr/include/xcb/glx.h:1222
+   CONST_XCB_GLX_PIXEL_STOREI : constant := 110;  --  /usr/include/xcb/glx.h:1222
 
-   XCB_GLX_READ_PIXELS : constant := 111;  --  /usr/include/xcb/glx.h:1244
+   CONST_XCB_GLX_READ_PIXELS : constant := 111;  --  /usr/include/xcb/glx.h:1244
 
-   XCB_GLX_GET_BOOLEANV : constant := 112;  --  /usr/include/xcb/glx.h:1283
+   CONST_XCB_GLX_GET_BOOLEANV : constant := 112;  --  /usr/include/xcb/glx.h:1283
 
-   XCB_GLX_GET_CLIP_PLANE : constant := 113;  --  /usr/include/xcb/glx.h:1318
+   CONST_XCB_GLX_GET_CLIP_PLANE : constant := 113;  --  /usr/include/xcb/glx.h:1318
 
-   XCB_GLX_GET_DOUBLEV : constant := 114;  --  /usr/include/xcb/glx.h:1350
+   CONST_XCB_GLX_GET_DOUBLEV : constant := 114;  --  /usr/include/xcb/glx.h:1350
 
-   XCB_GLX_GET_ERROR : constant := 115;  --  /usr/include/xcb/glx.h:1385
+   CONST_XCB_GLX_GET_ERROR : constant := 115;  --  /usr/include/xcb/glx.h:1385
 
-   XCB_GLX_GET_FLOATV : constant := 116;  --  /usr/include/xcb/glx.h:1416
+   CONST_XCB_GLX_GET_FLOATV : constant := 116;  --  /usr/include/xcb/glx.h:1416
 
-   XCB_GLX_GET_INTEGERV : constant := 117;  --  /usr/include/xcb/glx.h:1451
+   CONST_XCB_GLX_GET_INTEGERV : constant := 117;  --  /usr/include/xcb/glx.h:1451
 
-   XCB_GLX_GET_LIGHTFV : constant := 118;  --  /usr/include/xcb/glx.h:1486
+   CONST_XCB_GLX_GET_LIGHTFV : constant := 118;  --  /usr/include/xcb/glx.h:1486
 
-   XCB_GLX_GET_LIGHTIV : constant := 119;  --  /usr/include/xcb/glx.h:1522
+   CONST_XCB_GLX_GET_LIGHTIV : constant := 119;  --  /usr/include/xcb/glx.h:1522
 
-   XCB_GLX_GET_MAPDV : constant := 120;  --  /usr/include/xcb/glx.h:1558
+   CONST_XCB_GLX_GET_MAPDV : constant := 120;  --  /usr/include/xcb/glx.h:1558
 
-   XCB_GLX_GET_MAPFV : constant := 121;  --  /usr/include/xcb/glx.h:1594
+   CONST_XCB_GLX_GET_MAPFV : constant := 121;  --  /usr/include/xcb/glx.h:1594
 
-   XCB_GLX_GET_MAPIV : constant := 122;  --  /usr/include/xcb/glx.h:1630
+   CONST_XCB_GLX_GET_MAPIV : constant := 122;  --  /usr/include/xcb/glx.h:1630
 
-   XCB_GLX_GET_MATERIALFV : constant := 123;  --  /usr/include/xcb/glx.h:1666
+   CONST_XCB_GLX_GET_MATERIALFV : constant := 123;  --  /usr/include/xcb/glx.h:1666
 
-   XCB_GLX_GET_MATERIALIV : constant := 124;  --  /usr/include/xcb/glx.h:1702
+   CONST_XCB_GLX_GET_MATERIALIV : constant := 124;  --  /usr/include/xcb/glx.h:1702
 
-   XCB_GLX_GET_PIXEL_MAPFV : constant := 125;  --  /usr/include/xcb/glx.h:1738
+   CONST_XCB_GLX_GET_PIXEL_MAPFV : constant := 125;  --  /usr/include/xcb/glx.h:1738
 
-   XCB_GLX_GET_PIXEL_MAPUIV : constant := 126;  --  /usr/include/xcb/glx.h:1773
+   CONST_XCB_GLX_GET_PIXEL_MAPUIV : constant := 126;  --  /usr/include/xcb/glx.h:1773
 
-   XCB_GLX_GET_PIXEL_MAPUSV : constant := 127;  --  /usr/include/xcb/glx.h:1808
+   CONST_XCB_GLX_GET_PIXEL_MAPUSV : constant := 127;  --  /usr/include/xcb/glx.h:1808
 
-   XCB_GLX_GET_POLYGON_STIPPLE : constant := 128;  --  /usr/include/xcb/glx.h:1843
+   CONST_XCB_GLX_GET_POLYGON_STIPPLE : constant := 128;  --  /usr/include/xcb/glx.h:1843
 
-   XCB_GLX_GET_STRING : constant := 129;  --  /usr/include/xcb/glx.h:1875
+   CONST_XCB_GLX_GET_STRING : constant := 129;  --  /usr/include/xcb/glx.h:1875
 
-   XCB_GLX_GET_TEX_ENVFV : constant := 130;  --  /usr/include/xcb/glx.h:1909
+   CONST_XCB_GLX_GET_TEX_ENVFV : constant := 130;  --  /usr/include/xcb/glx.h:1909
 
-   XCB_GLX_GET_TEX_ENVIV : constant := 131;  --  /usr/include/xcb/glx.h:1945
+   CONST_XCB_GLX_GET_TEX_ENVIV : constant := 131;  --  /usr/include/xcb/glx.h:1945
 
-   XCB_GLX_GET_TEX_GENDV : constant := 132;  --  /usr/include/xcb/glx.h:1981
+   CONST_XCB_GLX_GET_TEX_GENDV : constant := 132;  --  /usr/include/xcb/glx.h:1981
 
-   XCB_GLX_GET_TEX_GENFV : constant := 133;  --  /usr/include/xcb/glx.h:2017
+   CONST_XCB_GLX_GET_TEX_GENFV : constant := 133;  --  /usr/include/xcb/glx.h:2017
 
-   XCB_GLX_GET_TEX_GENIV : constant := 134;  --  /usr/include/xcb/glx.h:2053
+   CONST_XCB_GLX_GET_TEX_GENIV : constant := 134;  --  /usr/include/xcb/glx.h:2053
 
-   XCB_GLX_GET_TEX_IMAGE : constant := 135;  --  /usr/include/xcb/glx.h:2089
+   CONST_XCB_GLX_GET_TEX_IMAGE : constant := 135;  --  /usr/include/xcb/glx.h:2089
 
-   XCB_GLX_GET_TEX_PARAMETERFV : constant := 136;  --  /usr/include/xcb/glx.h:2129
+   CONST_XCB_GLX_GET_TEX_PARAMETERFV : constant := 136;  --  /usr/include/xcb/glx.h:2129
 
-   XCB_GLX_GET_TEX_PARAMETERIV : constant := 137;  --  /usr/include/xcb/glx.h:2165
+   CONST_XCB_GLX_GET_TEX_PARAMETERIV : constant := 137;  --  /usr/include/xcb/glx.h:2165
 
-   XCB_GLX_GET_TEX_LEVEL_PARAMETERFV : constant := 138;  --  /usr/include/xcb/glx.h:2201
+   CONST_XCB_GLX_GET_TEX_LEVEL_PARAMETERFV : constant := 138;  --  /usr/include/xcb/glx.h:2201
 
-   XCB_GLX_GET_TEX_LEVEL_PARAMETERIV : constant := 139;  --  /usr/include/xcb/glx.h:2238
+   CONST_XCB_GLX_GET_TEX_LEVEL_PARAMETERIV : constant := 139;  --  /usr/include/xcb/glx.h:2238
 
-   XCB_GLX_IS_ENABLED : constant := 140;  --  /usr/include/xcb/glx.h:2275
+   CONST_XCB_GLX_IS_ENABLED : constant := 140;  --  /usr/include/xcb/glx.h:2275
 
-   XCB_GLX_IS_LIST : constant := 141;  --  /usr/include/xcb/glx.h:2307
+   CONST_XCB_GLX_IS_LIST : constant := 141;  --  /usr/include/xcb/glx.h:2307
 
-   XCB_GLX_FLUSH : constant := 142;  --  /usr/include/xcb/glx.h:2332
+   CONST_XCB_GLX_FLUSH : constant := 142;  --  /usr/include/xcb/glx.h:2332
 
-   XCB_GLX_ARE_TEXTURES_RESIDENT : constant := 143;  --  /usr/include/xcb/glx.h:2352
+   CONST_XCB_GLX_ARE_TEXTURES_RESIDENT : constant := 143;  --  /usr/include/xcb/glx.h:2352
 
-   XCB_GLX_DELETE_TEXTURES : constant := 144;  --  /usr/include/xcb/glx.h:2378
+   CONST_XCB_GLX_DELETE_TEXTURES : constant := 144;  --  /usr/include/xcb/glx.h:2378
 
-   XCB_GLX_GEN_TEXTURES : constant := 145;  --  /usr/include/xcb/glx.h:2399
+   CONST_XCB_GLX_GEN_TEXTURES : constant := 145;  --  /usr/include/xcb/glx.h:2399
 
-   XCB_GLX_IS_TEXTURE : constant := 146;  --  /usr/include/xcb/glx.h:2431
+   CONST_XCB_GLX_IS_TEXTURE : constant := 146;  --  /usr/include/xcb/glx.h:2431
 
-   XCB_GLX_GET_COLOR_TABLE : constant := 147;  --  /usr/include/xcb/glx.h:2463
+   CONST_XCB_GLX_GET_COLOR_TABLE : constant := 147;  --  /usr/include/xcb/glx.h:2463
 
-   XCB_GLX_GET_COLOR_TABLE_PARAMETERFV : constant := 148;  --  /usr/include/xcb/glx.h:2500
+   CONST_XCB_GLX_GET_COLOR_TABLE_PARAMETERFV : constant := 148;  --  /usr/include/xcb/glx.h:2500
 
-   XCB_GLX_GET_COLOR_TABLE_PARAMETERIV : constant := 149;  --  /usr/include/xcb/glx.h:2536
+   CONST_XCB_GLX_GET_COLOR_TABLE_PARAMETERIV : constant := 149;  --  /usr/include/xcb/glx.h:2536
 
-   XCB_GLX_GET_CONVOLUTION_FILTER : constant := 150;  --  /usr/include/xcb/glx.h:2572
+   CONST_XCB_GLX_GET_CONVOLUTION_FILTER : constant := 150;  --  /usr/include/xcb/glx.h:2572
 
-   XCB_GLX_GET_CONVOLUTION_PARAMETERFV : constant := 151;  --  /usr/include/xcb/glx.h:2610
+   CONST_XCB_GLX_GET_CONVOLUTION_PARAMETERFV : constant := 151;  --  /usr/include/xcb/glx.h:2610
 
-   XCB_GLX_GET_CONVOLUTION_PARAMETERIV : constant := 152;  --  /usr/include/xcb/glx.h:2646
+   CONST_XCB_GLX_GET_CONVOLUTION_PARAMETERIV : constant := 152;  --  /usr/include/xcb/glx.h:2646
 
-   XCB_GLX_GET_SEPARABLE_FILTER : constant := 153;  --  /usr/include/xcb/glx.h:2682
+   CONST_XCB_GLX_GET_SEPARABLE_FILTER : constant := 153;  --  /usr/include/xcb/glx.h:2682
 
-   XCB_GLX_GET_HISTOGRAM : constant := 154;  --  /usr/include/xcb/glx.h:2720
+   CONST_XCB_GLX_GET_HISTOGRAM : constant := 154;  --  /usr/include/xcb/glx.h:2720
 
-   XCB_GLX_GET_HISTOGRAM_PARAMETERFV : constant := 155;  --  /usr/include/xcb/glx.h:2758
+   CONST_XCB_GLX_GET_HISTOGRAM_PARAMETERFV : constant := 155;  --  /usr/include/xcb/glx.h:2758
 
-   XCB_GLX_GET_HISTOGRAM_PARAMETERIV : constant := 156;  --  /usr/include/xcb/glx.h:2794
+   CONST_XCB_GLX_GET_HISTOGRAM_PARAMETERIV : constant := 156;  --  /usr/include/xcb/glx.h:2794
 
-   XCB_GLX_GET_MINMAX : constant := 157;  --  /usr/include/xcb/glx.h:2830
+   CONST_XCB_GLX_GET_MINMAX : constant := 157;  --  /usr/include/xcb/glx.h:2830
 
-   XCB_GLX_GET_MINMAX_PARAMETERFV : constant := 158;  --  /usr/include/xcb/glx.h:2866
+   CONST_XCB_GLX_GET_MINMAX_PARAMETERFV : constant := 158;  --  /usr/include/xcb/glx.h:2866
 
-   XCB_GLX_GET_MINMAX_PARAMETERIV : constant := 159;  --  /usr/include/xcb/glx.h:2902
+   CONST_XCB_GLX_GET_MINMAX_PARAMETERIV : constant := 159;  --  /usr/include/xcb/glx.h:2902
 
-   XCB_GLX_GET_COMPRESSED_TEX_IMAGE_ARB : constant := 160;  --  /usr/include/xcb/glx.h:2938
+   CONST_XCB_GLX_GET_COMPRESSED_TEX_IMAGE_ARB : constant := 160;  --  /usr/include/xcb/glx.h:2938
 
-   XCB_GLX_DELETE_QUERIES_ARB : constant := 161;  --  /usr/include/xcb/glx.h:2966
+   CONST_XCB_GLX_DELETE_QUERIES_ARB : constant := 161;  --  /usr/include/xcb/glx.h:2966
 
-   XCB_GLX_GEN_QUERIES_ARB : constant := 162;  --  /usr/include/xcb/glx.h:2987
+   CONST_XCB_GLX_GEN_QUERIES_ARB : constant := 162;  --  /usr/include/xcb/glx.h:2987
 
-   XCB_GLX_IS_QUERY_ARB : constant := 163;  --  /usr/include/xcb/glx.h:3019
+   CONST_XCB_GLX_IS_QUERY_ARB : constant := 163;  --  /usr/include/xcb/glx.h:3019
 
-   XCB_GLX_GET_QUERYIV_ARB : constant := 164;  --  /usr/include/xcb/glx.h:3051
+   CONST_XCB_GLX_GET_QUERYIV_ARB : constant := 164;  --  /usr/include/xcb/glx.h:3051
 
-   XCB_GLX_GET_QUERY_OBJECTIV_ARB : constant := 165;  --  /usr/include/xcb/glx.h:3087
+   CONST_XCB_GLX_GET_QUERY_OBJECTIV_ARB : constant := 165;  --  /usr/include/xcb/glx.h:3087
 
-   XCB_GLX_GET_QUERY_OBJECTUIV_ARB : constant := 166;  --  /usr/include/xcb/glx.h:3123
+   CONST_XCB_GLX_GET_QUERY_OBJECTUIV_ARB : constant := 166;  --  /usr/include/xcb/glx.h:3123
 
   -- * This file generated automatically from glx.xml by c_client.py.
   -- * Edit at your peril.

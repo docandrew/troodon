@@ -19,7 +19,18 @@ project Troodon is
    package Linker is
       for Switches ("ada") use
       (
-            "-lxcb", "-lxcb-ewmh", "-lxcb-composite", "-lX11-xcb", "-lX11", "-lGL", "-lGLX", "-lfreetype"
+            "-lxcb",
+            "-lxcb-ewmh",
+            "-lxcb-composite", 
+            "-lxcb-glx",
+            "-lxcb-xfixes", 
+            "-lxcb-randr", 
+            "-lxcb-xinerama",
+            "-lX11-xcb", 
+            "-lX11", 
+            "-lGL",
+            "-lGLX", 
+            "-lfreetype"
       );
    end Linker;
 

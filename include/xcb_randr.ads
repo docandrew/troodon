@@ -15,107 +15,107 @@ package xcb_randr is
    XCB_RANDR_MAJOR_VERSION : constant := 1;  --  /usr/include/xcb/randr.h:23
    XCB_RANDR_MINOR_VERSION : constant := 6;  --  /usr/include/xcb/randr.h:24
 
-   XCB_RANDR_BAD_OUTPUT : constant := 0;  --  /usr/include/xcb/randr.h:84
+   CONST_XCB_RANDR_BAD_OUTPUT : constant := 0;  --  /usr/include/xcb/randr.h:84
 
-   XCB_RANDR_BAD_CRTC : constant := 1;  --  /usr/include/xcb/randr.h:96
+   CONST_XCB_RANDR_BAD_CRTC : constant := 1;  --  /usr/include/xcb/randr.h:96
 
-   XCB_RANDR_BAD_MODE : constant := 2;  --  /usr/include/xcb/randr.h:108
+   CONST_XCB_RANDR_BAD_MODE : constant := 2;  --  /usr/include/xcb/randr.h:108
 
-   XCB_RANDR_BAD_PROVIDER : constant := 3;  --  /usr/include/xcb/randr.h:120
+   CONST_XCB_RANDR_BAD_PROVIDER : constant := 3;  --  /usr/include/xcb/randr.h:120
 
-   XCB_RANDR_QUERY_VERSION : constant := 0;  --  /usr/include/xcb/randr.h:183
+   CONST_XCB_RANDR_QUERY_VERSION : constant := 0;  --  /usr/include/xcb/randr.h:183
 
-   XCB_RANDR_SET_SCREEN_CONFIG : constant := 2;  --  /usr/include/xcb/randr.h:224
+   CONST_XCB_RANDR_SET_SCREEN_CONFIG : constant := 2;  --  /usr/include/xcb/randr.h:224
 
-   XCB_RANDR_SELECT_INPUT : constant := 4;  --  /usr/include/xcb/randr.h:269
+   CONST_XCB_RANDR_SELECT_INPUT : constant := 4;  --  /usr/include/xcb/randr.h:269
 
-   XCB_RANDR_GET_SCREEN_INFO : constant := 5;  --  /usr/include/xcb/randr.h:291
+   CONST_XCB_RANDR_GET_SCREEN_INFO : constant := 5;  --  /usr/include/xcb/randr.h:291
 
-   XCB_RANDR_GET_SCREEN_SIZE_RANGE : constant := 6;  --  /usr/include/xcb/randr.h:330
+   CONST_XCB_RANDR_GET_SCREEN_SIZE_RANGE : constant := 6;  --  /usr/include/xcb/randr.h:330
 
-   XCB_RANDR_SET_SCREEN_SIZE : constant := 7;  --  /usr/include/xcb/randr.h:358
+   CONST_XCB_RANDR_SET_SCREEN_SIZE : constant := 7;  --  /usr/include/xcb/randr.h:358
 
-   XCB_RANDR_GET_SCREEN_RESOURCES : constant := 8;  --  /usr/include/xcb/randr.h:427
+   CONST_XCB_RANDR_GET_SCREEN_RESOURCES : constant := 8;  --  /usr/include/xcb/randr.h:427
 
-   XCB_RANDR_GET_OUTPUT_INFO : constant := 9;  --  /usr/include/xcb/randr.h:470
+   CONST_XCB_RANDR_GET_OUTPUT_INFO : constant := 9;  --  /usr/include/xcb/randr.h:470
 
-   XCB_RANDR_LIST_OUTPUT_PROPERTIES : constant := 10;  --  /usr/include/xcb/randr.h:512
+   CONST_XCB_RANDR_LIST_OUTPUT_PROPERTIES : constant := 10;  --  /usr/include/xcb/randr.h:512
 
-   XCB_RANDR_QUERY_OUTPUT_PROPERTY : constant := 11;  --  /usr/include/xcb/randr.h:544
+   CONST_XCB_RANDR_QUERY_OUTPUT_PROPERTY : constant := 11;  --  /usr/include/xcb/randr.h:544
 
-   XCB_RANDR_CONFIGURE_OUTPUT_PROPERTY : constant := 12;  --  /usr/include/xcb/randr.h:572
+   CONST_XCB_RANDR_CONFIGURE_OUTPUT_PROPERTY : constant := 12;  --  /usr/include/xcb/randr.h:572
 
-   XCB_RANDR_CHANGE_OUTPUT_PROPERTY : constant := 13;  --  /usr/include/xcb/randr.h:589
+   CONST_XCB_RANDR_CHANGE_OUTPUT_PROPERTY : constant := 13;  --  /usr/include/xcb/randr.h:589
 
-   XCB_RANDR_DELETE_OUTPUT_PROPERTY : constant := 14;  --  /usr/include/xcb/randr.h:608
+   CONST_XCB_RANDR_DELETE_OUTPUT_PROPERTY : constant := 14;  --  /usr/include/xcb/randr.h:608
 
-   XCB_RANDR_GET_OUTPUT_PROPERTY : constant := 15;  --  /usr/include/xcb/randr.h:629
+   CONST_XCB_RANDR_GET_OUTPUT_PROPERTY : constant := 15;  --  /usr/include/xcb/randr.h:629
 
-   XCB_RANDR_CREATE_MODE : constant := 16;  --  /usr/include/xcb/randr.h:670
+   CONST_XCB_RANDR_CREATE_MODE : constant := 16;  --  /usr/include/xcb/randr.h:670
 
-   XCB_RANDR_DESTROY_MODE : constant := 17;  --  /usr/include/xcb/randr.h:696
+   CONST_XCB_RANDR_DESTROY_MODE : constant := 17;  --  /usr/include/xcb/randr.h:696
 
-   XCB_RANDR_ADD_OUTPUT_MODE : constant := 18;  --  /usr/include/xcb/randr.h:709
+   CONST_XCB_RANDR_ADD_OUTPUT_MODE : constant := 18;  --  /usr/include/xcb/randr.h:709
 
-   XCB_RANDR_DELETE_OUTPUT_MODE : constant := 19;  --  /usr/include/xcb/randr.h:723
+   CONST_XCB_RANDR_DELETE_OUTPUT_MODE : constant := 19;  --  /usr/include/xcb/randr.h:723
 
-   XCB_RANDR_GET_CRTC_INFO : constant := 20;  --  /usr/include/xcb/randr.h:744
+   CONST_XCB_RANDR_GET_CRTC_INFO : constant := 20;  --  /usr/include/xcb/randr.h:744
 
-   XCB_RANDR_SET_CRTC_CONFIG : constant := 21;  --  /usr/include/xcb/randr.h:785
+   CONST_XCB_RANDR_SET_CRTC_CONFIG : constant := 21;  --  /usr/include/xcb/randr.h:785
 
-   XCB_RANDR_GET_CRTC_GAMMA_SIZE : constant := 22;  --  /usr/include/xcb/randr.h:824
+   CONST_XCB_RANDR_GET_CRTC_GAMMA_SIZE : constant := 22;  --  /usr/include/xcb/randr.h:824
 
-   XCB_RANDR_GET_CRTC_GAMMA : constant := 23;  --  /usr/include/xcb/randr.h:856
+   CONST_XCB_RANDR_GET_CRTC_GAMMA : constant := 23;  --  /usr/include/xcb/randr.h:856
 
-   XCB_RANDR_SET_CRTC_GAMMA : constant := 24;  --  /usr/include/xcb/randr.h:881
+   CONST_XCB_RANDR_SET_CRTC_GAMMA : constant := 24;  --  /usr/include/xcb/randr.h:881
 
-   XCB_RANDR_GET_SCREEN_RESOURCES_CURRENT : constant := 25;  --  /usr/include/xcb/randr.h:903
+   CONST_XCB_RANDR_GET_SCREEN_RESOURCES_CURRENT : constant := 25;  --  /usr/include/xcb/randr.h:903
 
-   XCB_RANDR_SET_CRTC_TRANSFORM : constant := 26;  --  /usr/include/xcb/randr.h:940
+   CONST_XCB_RANDR_SET_CRTC_TRANSFORM : constant := 26;  --  /usr/include/xcb/randr.h:940
 
-   XCB_RANDR_GET_CRTC_TRANSFORM : constant := 27;  --  /usr/include/xcb/randr.h:963
+   CONST_XCB_RANDR_GET_CRTC_TRANSFORM : constant := 27;  --  /usr/include/xcb/randr.h:963
 
-   XCB_RANDR_GET_PANNING : constant := 28;  --  /usr/include/xcb/randr.h:1002
+   CONST_XCB_RANDR_GET_PANNING : constant := 28;  --  /usr/include/xcb/randr.h:1002
 
-   XCB_RANDR_SET_PANNING : constant := 29;  --  /usr/include/xcb/randr.h:1045
+   CONST_XCB_RANDR_SET_PANNING : constant := 29;  --  /usr/include/xcb/randr.h:1045
 
-   XCB_RANDR_SET_OUTPUT_PRIMARY : constant := 30;  --  /usr/include/xcb/randr.h:1082
+   CONST_XCB_RANDR_SET_OUTPUT_PRIMARY : constant := 30;  --  /usr/include/xcb/randr.h:1082
 
-   XCB_RANDR_GET_OUTPUT_PRIMARY : constant := 31;  --  /usr/include/xcb/randr.h:1103
+   CONST_XCB_RANDR_GET_OUTPUT_PRIMARY : constant := 31;  --  /usr/include/xcb/randr.h:1103
 
-   XCB_RANDR_GET_PROVIDERS : constant := 32;  --  /usr/include/xcb/randr.h:1134
+   CONST_XCB_RANDR_GET_PROVIDERS : constant := 32;  --  /usr/include/xcb/randr.h:1134
 
-   XCB_RANDR_GET_PROVIDER_INFO : constant := 33;  --  /usr/include/xcb/randr.h:1174
+   CONST_XCB_RANDR_GET_PROVIDER_INFO : constant := 33;  --  /usr/include/xcb/randr.h:1174
 
-   XCB_RANDR_SET_PROVIDER_OFFLOAD_SINK : constant := 34;  --  /usr/include/xcb/randr.h:1205
+   CONST_XCB_RANDR_SET_PROVIDER_OFFLOAD_SINK : constant := 34;  --  /usr/include/xcb/randr.h:1205
 
-   XCB_RANDR_SET_PROVIDER_OUTPUT_SOURCE : constant := 35;  --  /usr/include/xcb/randr.h:1220
+   CONST_XCB_RANDR_SET_PROVIDER_OUTPUT_SOURCE : constant := 35;  --  /usr/include/xcb/randr.h:1220
 
-   XCB_RANDR_LIST_PROVIDER_PROPERTIES : constant := 36;  --  /usr/include/xcb/randr.h:1242
+   CONST_XCB_RANDR_LIST_PROVIDER_PROPERTIES : constant := 36;  --  /usr/include/xcb/randr.h:1242
 
-   XCB_RANDR_QUERY_PROVIDER_PROPERTY : constant := 37;  --  /usr/include/xcb/randr.h:1274
+   CONST_XCB_RANDR_QUERY_PROVIDER_PROPERTY : constant := 37;  --  /usr/include/xcb/randr.h:1274
 
-   XCB_RANDR_CONFIGURE_PROVIDER_PROPERTY : constant := 38;  --  /usr/include/xcb/randr.h:1302
+   CONST_XCB_RANDR_CONFIGURE_PROVIDER_PROPERTY : constant := 38;  --  /usr/include/xcb/randr.h:1302
 
-   XCB_RANDR_CHANGE_PROVIDER_PROPERTY : constant := 39;  --  /usr/include/xcb/randr.h:1319
+   CONST_XCB_RANDR_CHANGE_PROVIDER_PROPERTY : constant := 39;  --  /usr/include/xcb/randr.h:1319
 
-   XCB_RANDR_DELETE_PROVIDER_PROPERTY : constant := 40;  --  /usr/include/xcb/randr.h:1338
+   CONST_XCB_RANDR_DELETE_PROVIDER_PROPERTY : constant := 40;  --  /usr/include/xcb/randr.h:1338
 
-   XCB_RANDR_GET_PROVIDER_PROPERTY : constant := 41;  --  /usr/include/xcb/randr.h:1359
+   CONST_XCB_RANDR_GET_PROVIDER_PROPERTY : constant := 41;  --  /usr/include/xcb/randr.h:1359
 
-   XCB_RANDR_SCREEN_CHANGE_NOTIFY : constant := 0;  --  /usr/include/xcb/randr.h:1393
+   CONST_XCB_RANDR_SCREEN_CHANGE_NOTIFY : constant := 0;  --  /usr/include/xcb/randr.h:1393
 
-   XCB_RANDR_GET_MONITORS : constant := 42;  --  /usr/include/xcb/randr.h:1585
+   CONST_XCB_RANDR_GET_MONITORS : constant := 42;  --  /usr/include/xcb/randr.h:1585
 
-   XCB_RANDR_SET_MONITOR : constant := 43;  --  /usr/include/xcb/randr.h:1613
+   CONST_XCB_RANDR_SET_MONITOR : constant := 43;  --  /usr/include/xcb/randr.h:1613
 
-   XCB_RANDR_DELETE_MONITOR : constant := 44;  --  /usr/include/xcb/randr.h:1626
+   CONST_XCB_RANDR_DELETE_MONITOR : constant := 44;  --  /usr/include/xcb/randr.h:1626
 
-   XCB_RANDR_CREATE_LEASE : constant := 45;  --  /usr/include/xcb/randr.h:1647
+   CONST_XCB_RANDR_CREATE_LEASE : constant := 45;  --  /usr/include/xcb/randr.h:1647
 
-   XCB_RANDR_FREE_LEASE : constant := 46;  --  /usr/include/xcb/randr.h:1674
+   CONST_XCB_RANDR_FREE_LEASE : constant := 46;  --  /usr/include/xcb/randr.h:1674
 
-   XCB_RANDR_NOTIFY : constant := 1;  --  /usr/include/xcb/randr.h:1730
+   CONST_XCB_RANDR_NOTIFY : constant := 1;  --  /usr/include/xcb/randr.h:1730
 
    xcb_randr_id : aliased xcb.xcb_extension_t  -- /usr/include/xcb/randr.h:26
    with Import => True, 

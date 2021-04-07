@@ -9,16 +9,90 @@ with xcb; use xcb;
 with xproto; use xproto;
 with xcb_ewmh; use xcb_ewmh;
 
+-- Just for checking extensions
+with xcb_composite;
+with xcb_glx;
+with xcb_xfixes;
+with xcb_xinerama;
+with xcb_randr;
+
 with GLX;
 
 with Interfaces;
 with Interfaces.C; use Interfaces.C;
 with Interfaces.C.Strings; use Interfaces.C.Strings;
 
-with util; use util;
+with Util; use Util;
 
-package body setup is
+package body Setup is
+
     ewmhObj : aliased xcb_ewmh_connection_t;
+
+    ---------------------------------------------------------------------------
+    -- checkExtensions    
+    ---------------------------------------------------------------------------
+    function checkExtensions (c : access xcb_connection_t) return Boolean is
+
+        GLXQuery        : access constant xproto.xcb_query_extension_reply_t;
+        XCompositeQuery : access constant xproto.xcb_query_extension_reply_t;
+        XFixesQuery     : access constant xproto.xcb_query_extension_reply_t;
+        XineramaQuery   : access constant xproto.xcb_query_extension_reply_t;
+        XRandrQuery     : access constant xproto.xcb_query_extension_reply_t;
+
+        hasGLX          : Boolean := False;
+        hasXComposite   : Boolean := False;
+        hasXFixes       : Boolean := False;
+        hasXinerama     : Boolean := False;
+        hasXRandr       : Boolean := False;
+    begin
+        Ada.Text_IO.Put_Line ("Troodon: checking for required extensions...");
+
+        GLXQuery        := xcb.xcb_get_extension_data (c   => c,
+                                                       ext => xcb_glx.xcb_glx_id'Access);
+
+        XCompositeQuery := xcb.xcb_get_extension_data (c   => c,
+                                                       ext => xcb_composite.xcb_composite_id'Access);
+
+        XFixesQuery     := xcb.xcb_get_extension_data (c   => c,
+                                                       ext => xcb_xfixes.xcb_xfixes_id'Access);
+
+        XineramaQuery   := xcb.xcb_get_extension_data (c   => c,
+                                                       ext => xcb_xinerama.xcb_xinerama_id'Access);
+
+        XRandrQuery     := xcb.xcb_get_extension_data (c   => c,
+                                                       ext => xcb_randr.xcb_randr_id'Access);
+
+        if GLXQuery         = null or
+           XCompositeQuery  = null or
+           XFixesQuery      = null or
+           XineramaQuery    = null or
+           XRandrQuery      = null then
+
+            raise SetupException with "Unable to get extension data from X Server";
+        end if;
+
+        hasGLX        := GLXQuery.present /= 0;
+        hasXComposite := XCompositeQuery.present /= 0;
+        hasXFixes     := XFixesQuery.present /= 0;
+        hasXinerama   := XineramaQuery.present /= 0;
+        hasXRandr     := XRandrQuery.present /= 0;
+
+        Ada.Text_IO.Put_Line (" GLX.......: " & (if hasGLX        then "Enabled" else "NOT ENABLED"));
+        Ada.Text_IO.Put_Line (" XComposite: " & (if hasXComposite then "Enabled" else "NOT ENABLED"));
+        Ada.Text_IO.Put_Line (" XFixes....: " & (if hasXFixes     then "Enabled" else "NOT ENABLED"));
+        Ada.Text_IO.Put_Line (" Xinerama..: " & (if hasXinerama   then "Enabled" else "NOT ENABLED"));
+        Ada.Text_IO.Put_Line (" XRandr....: " & (if hasXRandr     then "Enabled" else "NOT ENABLED"));
+
+        if (hasGLX and hasXComposite and hasXFixes and hasXinerama and hasXRandr) then
+            return True;
+        else
+            --@TODO for missing extensions, offer helpful hints about how to obtain them or otherwise
+            -- configure the X Server.
+            Ada.Text_IO.Put_Line (" One or more required extensions is not enabled on the X Server, cannot run Troodon.");
+            return False;
+        end if;
+
+    end checkExtensions;
 
     ---------------------------------------------------------------------------
     -- initEwmh
