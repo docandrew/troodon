@@ -277,7 +277,7 @@ package body events is
     begin
         motionEvent := toMotionEvent(event);
 
-        --Ada.Text_IO.Put_Line ("Root X: " & motionEvent.root_x'Image & " Root Y: " & motionEvent.root_y'Image);
+        -- Ada.Text_IO.Put_Line ("Root X: " & motionEvent.root_x'Image & " Root Y: " & motionEvent.root_y'Image);
         
         if dragFrame /= 0 then
             -- Update window location
@@ -310,33 +310,88 @@ package body events is
         use Frames;
 
         type ExposeEventPtr is access all xcb_expose_event_t;
-        function toExposeEvent is new Ada.Unchecked_Conversion(Source => eventPtr, Target => ExposeEventPtr);
-        exposeEvent : ExposeEventPtr := toExposeEvent(event);
+        function toExposeEvent is new Ada.Unchecked_Conversion (Source => eventPtr, Target => ExposeEventPtr);
+        exposeEvent : ExposeEventPtr := toExposeEvent (event);
 
     begin
-        -- Ada.Text_IO.Put_Line("enter handleExpose");
-
-        -- Tell compositor to blit this to the overlay
-        Compositor.blitWindow (c    => connection, 
-                               win  => exposeEvent.window,
-                               rend => rend);
+        Ada.Text_IO.Put_Line ("exposing window" & exposeEvent.window'Image);
 
         -- If we're exposing a window, expose the frame too (if it has one) and vice versa.
-        if isFrame(exposeEvent.window) then
+        -- We'll tell the compositor to blit the frame first then window contents after.
+        if isFrame (exposeEvent.window) then
             -- exposing a frame
-            getFrameFromList(exposeEvent.window).draw;
-        elsif hasFrame(exposeEvent.window) then
-            -- exposing a framed application window
-            getFrameOfWindow(exposeEvent.window).draw;
+            getFrameFromList (exposeEvent.window).draw;
+
+            -- Compositor.blitWindow (c    => connection,
+            --                        win  => getFrameFromList (exposeEvent.window).frameID,
+            --                        rend => rend);
+
+            -- Compositor.blitWindow (c    => connection,
+            --                        win  => getFrameFromList (exposeEvent.window).appWindow,
+            --                        rend => rend);
+
+        elsif hasFrame (exposeEvent.window) then
+            -- exposing a framed application window.
+            getFrameOfWindow (exposeEvent.window).draw;
+
+            -- blit the frame
+            -- Compositor.blitWindow (c    => connection, 
+            --                        win  => getFrameOfWindow(exposeEvent.window).frameID,
+            --                        rend => rend);
+
+            -- Compositor.blitWindow (c    => connection, 
+            --                        win  => getFrameOfWindow(exposeEvent.window).appWindow,
+            --                        rend => rend);                                   
+
         else
             -- exposing a non-framed window, just let it expose.
             -- @TODO if we determine this is a DE menu or something like that
-            --  then we'll want to draw it here.
+            --  then we'll want to draw it here too.
+            -- Compositor.blitWindow (c    => connection,
+            --                        win  => exposeEvent.window,
+            --                        rend => rend);
             null;
         end if;
 
         -- Ada.Text_IO.Put_Line("exit handleExpose");
     end handleExpose;
+
+    ---------------------------------------------------------------------------
+    -- handleCreate
+    ---------------------------------------------------------------------------
+    procedure handleCreate (connection : access xcb_connection_t;
+                            event      : eventPtr;
+                            rend       : Render.Renderer) is
+        type CreateEventPtr is access all xcb_create_notify_event_t;
+
+        function toCreateEvent is new Ada.Unchecked_Conversion (Source => eventPtr, Target => CreateEventPtr);
+        createEvent : CreateEventPtr := toCreateEvent (event);
+
+        win : xcb_window_t := createEvent.window;
+    begin
+        Ada.Text_IO.Put_Line ("Window Create: " & createEvent.window'Image & " with parent " & createEvent.parent'Image);
+    
+        -- Add to the list, but ignore the overlay window since we get a
+        -- create notification for that too.
+        if win /= Compositor.overlayWindow then
+            Compositor.addWindow (win);
+        end if;
+    end handleCreate;
+
+    ---------------------------------------------------------------------------
+    -- handleDestroy
+    ---------------------------------------------------------------------------
+    procedure handleDestroy (connection : access xcb_connection_t;
+                             event      : eventPtr) is
+        type DestroyEventPtr is access all xcb_destroy_notify_event_t;
+
+        function toDestroyEvent is new Ada.Unchecked_Conversion (Source => eventPtr, Target => DestroyEventPtr);
+        destroyEvent : DestroyEventPtr := toDestroyEvent (event);
+    begin
+        Ada.Text_IO.Put_Line ("Window Destroy: " & destroyEvent.window'Image);
+
+        Compositor.deleteWindow (destroyEvent.window);
+    end handleDestroy;
 
     ---------------------------------------------------------------------------
     -- eventLoop
@@ -367,35 +422,28 @@ package body events is
     
             case (event.response_type and XCB_EVENT_MASK) is
                 when CONST_XCB_MAP_REQUEST =>
-                    events.handleMapRequest(connection, event, rend);
-                    null;
+                    events.handleMapRequest (connection, event, rend);
                     
                 when CONST_XCB_CONFIGURE_REQUEST =>
-                    events.handleConfigureRequest(connection, event);
-                    null;
+                    events.handleConfigureRequest (connection, event);
     
-                 when CONST_XCB_BUTTON_PRESS =>
-                     events.handleButtonPress(connection, event);
-                --     null;
+                when CONST_XCB_BUTTON_PRESS =>
+                    events.handleButtonPress (connection, event);
             
                 when CONST_XCB_MOTION_NOTIFY =>
-                    events.handleMotionNotify(connection, event);
-                --     null;
+                    events.handleMotionNotify (connection, event);
     
                 when CONST_XCB_BUTTON_RELEASE =>
-                    events.handleButtonRelease(connection, event);
-                --     null;
+                    events.handleButtonRelease (connection, event);
     
                 when CONST_XCB_EXPOSE =>
-                    events.handleExpose(connection, event, rend);
-                    null;
+                    events.handleExpose (connection, event, rend);
 
                 when CONST_XCB_CREATE_NOTIFY =>
-                    -- TODO: give input focus to the new window, probably
-                    null;
+                    events.handleCreate (connection, event, rend);
 
                 when CONST_XCB_DESTROY_NOTIFY =>
-                    null;
+                    events.handleDestroy (connection, event);
 
                 when CONST_XCB_KEY_PRESS =>
                     Ada.Text_IO.Put_Line("Key Pressed");
@@ -403,6 +451,9 @@ package body events is
                 when others =>
                     null;
             end case;
+
+            -- Re-render everything.
+            Compositor.blitAll (connection, rend);
     
             free (event);
             --Ada.Text_IO.Put_Line("End Event Loop");

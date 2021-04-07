@@ -21,6 +21,24 @@ package Compositor is
     overlayDrawable : GLX.GLXDrawable;
 
     ---------------------------------------------------------------------------
+    -- addWindow
+    -- Add a window to our scene at the top of the rendering stack.
+    ---------------------------------------------------------------------------
+    procedure addWindow (win : xproto.xcb_window_t);
+
+    ---------------------------------------------------------------------------
+    -- deleteWindow
+    -- Remove the given window from our rendering stack.
+    ---------------------------------------------------------------------------
+    procedure deleteWindow (win : xproto.xcb_window_t);
+
+    ---------------------------------------------------------------------------
+    -- bringToTop
+    -- Raise the given window to the top of the rendering stack.
+    ---------------------------------------------------------------------------
+    procedure bringToTop (win : xproto.xcb_window_t);
+
+    ---------------------------------------------------------------------------
     -- initCompositor
     -- Initialize the compositor
     ---------------------------------------------------------------------------
@@ -34,4 +52,11 @@ package Compositor is
     procedure blitWindow (c    : access xcb.xcb_connection_t;
                           rend : Render.Renderer;
                           win  : xproto.xcb_window_t);
+
+    -------------------------------------------------------------------------------
+    -- blitAll
+    -- Copy the off-screen buffers of all windows into the overlay window.
+    -------------------------------------------------------------------------------
+    procedure blitAll (c    : access xcb.xcb_connection_t;
+                       rend : Render.Renderer);
 end Compositor;

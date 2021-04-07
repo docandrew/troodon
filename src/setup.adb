@@ -35,20 +35,44 @@ package body Setup is
     --  filled-in query to come up with a better error-reporting mechanism.
     ---------------------------------------------------------------------------
     function checkExtensions (c : access xcb_connection_t) return Boolean is
+        use xcb_glx;
+        use xcb_composite;
+        use xcb_xfixes;
+        use xcb_xinerama;
+        use xcb_randr;
+        use xcb_shape;
 
-        GLXQuery        : access constant xproto.xcb_query_extension_reply_t;
-        XCompositeQuery : access constant xproto.xcb_query_extension_reply_t;
-        XFixesQuery     : access constant xproto.xcb_query_extension_reply_t;
-        XineramaQuery   : access constant xproto.xcb_query_extension_reply_t;
-        XRandrQuery     : access constant xproto.xcb_query_extension_reply_t;
-        XShapeQuery     : access constant xproto.xcb_query_extension_reply_t;
+        GLXQuery               : access constant xproto.xcb_query_extension_reply_t;
+        hasGLX                 : Boolean := False;
+        GLXVersionQuery        : xcb_glx_query_version_cookie_t;
+        GLXVersionReply        : access xcb_glx_query_version_reply_t;
 
-        hasGLX          : Boolean := False;
-        hasXComposite   : Boolean := False;
-        hasXFixes       : Boolean := False;
-        hasXinerama     : Boolean := False;
-        hasXRandr       : Boolean := False;
-        hasXShape       : Boolean := False;
+        XCompositeQuery        : access constant xproto.xcb_query_extension_reply_t;
+        hasXComposite          : Boolean := False;
+        XCompositeVersionQuery : xcb_composite_query_version_cookie_t;
+        XCompositeVersionReply : access xcb_composite_query_version_reply_t;
+
+        XFixesQuery            : access constant xproto.xcb_query_extension_reply_t;
+        hasXFixes              : Boolean := False;
+        XFixesVersionQuery     : xcb_xfixes_query_version_cookie_t;
+        XFixesVersionReply     : access xcb_xfixes_query_version_reply_t;
+
+        XineramaQuery          : access constant xproto.xcb_query_extension_reply_t;
+        hasXinerama            : Boolean := False;
+        XineramaVersionQuery   : xcb_xinerama_query_version_cookie_t;
+        XineramaVersionReply   : access xcb_xinerama_query_version_reply_t;
+        
+        XRandrQuery            : access constant xproto.xcb_query_extension_reply_t;
+        hasXRandr              : Boolean := False;
+        XRandrVersionQuery     : xcb_randr_query_version_cookie_t;
+        XRandrVersionReply     : access xcb_randr_query_version_reply_t;
+        
+        XShapeQuery            : access constant xproto.xcb_query_extension_reply_t;
+        hasXShape              : Boolean := False;
+        XShapeVersionQuery     : xcb_shape_query_version_cookie_t;
+        XShapeVersionReply     : access xcb_shape_query_version_reply_t;
+
+        error : access xcb_generic_error_t;
     begin
         Ada.Text_IO.Put_Line ("Troodon: checking for required extensions...");
 
@@ -87,26 +111,57 @@ package body Setup is
         hasXRandr     := XRandrQuery.present /= 0;
         hasXShape     := XShapeQuery.present /= 0;
 
+        if not (hasGLX    and hasXComposite and
+                hasXFixes and hasXinerama and
+                hasXRandr and hasXShape) then
+            --@TODO for missing extensions, offer helpful hints about how to obtain them or otherwise
+            Ada.Text_IO.Put_Line (" One or more required extensions is not enabled on the X Server, cannot run Troodon.");
+            return False;
+        end if;
+
+        -- Enable required extension versions
+        XFixesVersionQuery := xcb_xfixes_query_version (c                    => c,
+                                                        client_major_version => 5,
+                                                        client_minor_version => 0);
+
+        XFixesVersionReply  := xcb_xfixes_query_version_reply (c      => c,
+                                                               cookie => XFixesVersionQuery,
+                                                               e      => error'Address);
+
+        if error /= null then
+            raise SetupException with "Error getting XFixes version, " & error.error_code'Image
+                    & " response type:" & error.response_type'Image
+                    & " major:"         & error.major_code'Image 
+                    & " minor:"         & error.minor_code'Image
+                    & " resource:"      & error.resource_id'Image
+                    & " sequence:"      & error.sequence'Image;
+        end if;
+
+        XCompositeVersionQuery := xcb_composite_query_version (c => c, 
+                                                               client_major_version => 0,
+                                                               client_minor_version => 4);
+
+        XCompositeVersionReply := xcb_composite_query_version_reply (c      => c,
+                                                                     cookie => XCompositeVersionQuery,
+                                                                     e      => error'Address);
+
+        if error /= null then
+            raise SetupException with "Error getting XComposite version, " & error.error_code'Image
+                    & " response type:" & error.response_type'Image
+                    & " major:"         & error.major_code'Image 
+                    & " minor:"         & error.minor_code'Image
+                    & " resource:"      & error.resource_id'Image
+                    & " sequence:"      & error.sequence'Image;
+        end if;
+
         Ada.Text_IO.Put_Line (" GLX.......: " & (if hasGLX        then "Enabled" else "NOT ENABLED"));
-        Ada.Text_IO.Put_Line (" XComposite: " & (if hasXComposite then "Enabled" else "NOT ENABLED"));
-        Ada.Text_IO.Put_Line (" XFixes....: " & (if hasXFixes     then "Enabled" else "NOT ENABLED"));
+        Ada.Text_IO.Put_Line (" XComposite: " & (if hasXComposite then "Enabled" else "NOT ENABLED") & " version" & XCompositeVersionReply.major_version'Image & "." & XCompositeVersionReply.minor_version'Image);
+        Ada.Text_IO.Put_Line (" XFixes....: " & (if hasXFixes     then "Enabled" else "NOT ENABLED") & " version" & XFixesVersionReply.major_version'Image & "." & XFixesVersionReply.minor_version'Image);
         Ada.Text_IO.Put_Line (" Xinerama..: " & (if hasXinerama   then "Enabled" else "NOT ENABLED"));
         Ada.Text_IO.Put_Line (" XRandr....: " & (if hasXRandr     then "Enabled" else "NOT ENABLED"));
         Ada.Text_IO.Put_Line (" XShape....: " & (if hasXShape     then "Enabled" else "NOT ENABLED"));
 
-        if (hasGLX and 
-            hasXComposite and
-            hasXFixes and
-            hasXinerama and
-            hasXRandr and
-            hasXShape) then
-            return True;
-        else
-            --@TODO for missing extensions, offer helpful hints about how to obtain them or otherwise
-            -- configure the X Server.
-            Ada.Text_IO.Put_Line (" One or more required extensions is not enabled on the X Server, cannot run Troodon.");
-            return False;
-        end if;
+        return True;        
 
     end checkExtensions;
 

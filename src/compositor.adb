@@ -1,3 +1,5 @@
+with Ada.Containers.Doubly_Linked_Lists;
+
 with Ada.Text_IO;
 with Ada.Unchecked_Conversion;
 with Ada.Unchecked_Deallocation;
@@ -32,6 +34,52 @@ package body Compositor is
     fastTexFromPixmap     : Boolean := False;
     glXBindTexImageEXT    : GLXext.PFNGLXBINDTEXIMAGEEXTPROC;
     glXReleaseTexImageEXT : GLXext.PFNGLXRELEASETEXIMAGEEXTPROC;
+
+    ---------------------------------------------------------------------------
+    -- Keep a list of all the windows so we can re-draw them in stacking order.
+    -- As a window is focused, we remove it and re-append it to the end of this
+    -- list. (bottom = first, top = last).
+    --
+    -- This can be thought of as a sort of primitive scene graph.
+    ---------------------------------------------------------------------------
+    package WindowStack is new Ada.Containers.Doubly_Linked_Lists
+        (Element_Type => xproto.xcb_window_t);
+
+    winStack : WindowStack.List;
+
+    ---------------------------------------------------------------------------
+    -- addWindow
+    ---------------------------------------------------------------------------
+    procedure addWindow (win : xproto.xcb_window_t) is
+        use WindowStack;
+    begin
+        winStack.append (win);
+    end addWindow;
+
+    ---------------------------------------------------------------------------
+    -- deleteWindow
+    ---------------------------------------------------------------------------
+    procedure deleteWindow (win : xproto.xcb_window_t) is
+        use WindowStack;
+
+        C : Cursor := winStack.find (win);
+    begin
+        if C /= No_Element then
+            winStack.delete (C);
+        else
+            raise CompositorException with "Attempted to bring non-existent window to top of render stack";
+        end if;
+    end deleteWindow;
+
+    ---------------------------------------------------------------------------
+    -- bringToTop
+    ---------------------------------------------------------------------------
+    procedure bringToTop (win : xproto.xcb_window_t) is
+        use WindowStack;
+    begin
+        deleteWindow (win);
+        winStack.append (win);
+    end bringToTop;
 
     ---------------------------------------------------------------------------
     -- createGLOverlay
@@ -313,10 +361,7 @@ package body Compositor is
         -- Destination quad to which the window shall be rendered
         dest   : Render.Util.Box;
     begin
-        glxRet := GLX.glXMakeContextCurrent (dpy  => rend.display,
-                                             draw => overlayDrawable,
-                                             read => overlayDrawable,
-                                             ctx  => rend.context);
+        --Ada.Text_IO.Put_Line ("Blitting window " & win'Image);
 
         -- Get window geometry
         geomWin := Util.getWindowGeometry (c, win);
@@ -349,7 +394,9 @@ package body Compositor is
         error := xcb_request_check (c, cookie);
 
         if error /= null then
-            raise CompositorException with "Failed to get off-screen pixmap from X Composite extension, error:" & error.error_code'Image;
+            -- If off-screen pixmap isn't ready yet, just go ahead and bail.
+            return;
+            --raise CompositorException with "Failed to get off-screen pixmap for window " & win'Image & "from X Composite extension, error:" & error.error_code'Image;
         end if;
 
         -- Need to bind to an intermediate GLX pixmap object first.
@@ -415,8 +462,6 @@ package body Compositor is
                          first => 0,
                          count => Interfaces.C.int(dest'Last));
 
-        GLX.glXSwapBuffers (rend.display, overlayDrawable);
-
         glXReleaseTexImageEXT (rend.display, glxPixmap, GLXext.GLX_FRONT_LEFT_EXT);
 
         GLext.glDisableVertexAttribArray (GL.GLuint(Render.Shaders.winAttribCoord));
@@ -428,23 +473,39 @@ package body Compositor is
     -- blitAll
     -- Copy the off-screen buffers of all windows into the overlay window.
     --
-    -- @TODO we're going to need a list of all windows
     -- @TODO track damage and re-render only as necessary?
     --
     -- See http://developer.download.nvidia.com/opengl/specs/GLX_EXT_texture_from_pixmap.txt
     -------------------------------------------------------------------------------
     procedure blitAll (c    : access xcb.xcb_connection_t;
                        rend : Render.Renderer) is
+        glxRet : int;
     begin
-        null;
         -- To ensure all window pixmaps are in a coherent state, and not mid-copy:
         --
         -- receive request for compositing
         -- grab server
-        -- glXWaitX?
-        -- glxBindTexImageEXT (blitWindow)
+        -- glXWaitX? (to avoid screen tearing I think)
+
         -- perform rendering/compositing
-        -- glxReleaseTexImageEXT (blitWindow)
+        glxRet := GLX.glXMakeContextCurrent (dpy  => rend.display,
+                                             draw => overlayDrawable,
+                                             read => overlayDrawable,
+                                             ctx  => rend.context);
+
+        GL.glClearColor (red   => 0.7,
+                         green => 0.7,
+                         blue  => 0.0,
+                         alpha => 1.0); --FRAME_BG_GL.a);
+
+        GL.glClear (GL.GL_COLOR_BUFFER_BIT);
+
+        for win of winStack loop
+            blitWindow (c, rend, win);
+        end loop;
+
+        GLX.glXSwapBuffers (rend.display, overlayDrawable);
+
         -- ungrab server
     end blitAll;
 end Compositor;

@@ -5,7 +5,7 @@ with xcb;
 with xcb_ewmh;
 with xproto;
 
-package setup is
+package Setup is
 
     -- Thrown if there's a fatal error during the initialization process.
     SetupException : exception;
@@ -33,4 +33,4 @@ package setup is
     function getScreen (connection : access xcb.xcb_connection_t) return access xproto.xcb_screen_t;
     function getRootWindow (connection : access xcb.xcb_connection_t) return xproto.xcb_window_t;
 
-end setup;
+end Setup;
