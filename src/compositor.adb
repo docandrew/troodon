@@ -11,6 +11,8 @@ with GLXext;
 with X11;
 with XLib;
 with xcb;
+with xcb_xfixes;
+with xcb_shape;
 with xproto;
 with xcb_composite;
 
@@ -67,9 +69,109 @@ package body Compositor is
             raise CompositorException with "Troodon: (compositor) Failed to make GLX context current.";
         end if;
 
-        Compositor.overlayWindow := overlayWin;
+        Compositor.overlayWindow   := overlayWin;
         Compositor.overlayDrawable := drawable;
     end createGLOverlay;
+
+    ---------------------------------------------------------------------------
+    -- allowInputPassthrough
+    -- Tell the overlay window not to receive events using a (well-known?) 
+    -- XFixes technique. I'm not sure the origin of this technique, but I most
+    -- assuredly did not invent it.
+    --
+    -- Essentially, we create a XFixes region with an empty shape, and set that
+    -- as the input region for the overlay window, essentially making it an
+    -- "output only" window.
+    --
+    -- @TODO when using checked versions of these functions, we seem to always
+    -- get an error code. Notably, Qt does not check for errors on these.
+    ---------------------------------------------------------------------------
+    procedure allowInputPassthrough (c : access xcb.xcb_connection_t; win : xproto.xcb_window_t) is
+        use xcb;
+        use xproto;
+        use xcb_xfixes;
+        use xcb_shape;
+
+        -- rect        : aliased xcb_rectangle_t := (x => 0, y => 0, width => 0, height => 0);
+        region      : xcb_xfixes_region_t;
+        regionInput : xcb_shape_kind_t := xcb_shape_kind_t(xcb_shape_sk_t'Pos(XCB_SHAPE_SK_INPUT));
+        cookie      : xcb_void_cookie_t;
+        error       : access xcb_generic_error_t;
+
+        cookieVersion : xcb_xfixes_query_version_cookie_t;
+        replyVersion  : access xcb_xfixes_query_version_reply_t;
+        -- errorVers   : access xcb_generic_error_t;
+    begin
+        -- Need to explicitly query the XFixes version here, otherwise the create_region call fails.
+        cookieVersion := xcb_xfixes_query_version (c                    => c,
+                                                   client_major_version => 5,
+                                                   client_minor_version => 0);
+
+        replyVersion := xcb_xfixes_query_version_reply (c      => c,
+                                                        cookie => cookieVersion,
+                                                        e      => error'Address);
+
+        if error /= null then
+            raise CompositorException with "Error getting XFixes version, " & error.error_code'Image
+                    & " response type:" & error.response_type'Image
+                    & " major:"         & error.major_code'Image 
+                    & " minor:"         & error.minor_code'Image
+                    & " resource:"      & error.resource_id'Image
+                    & " sequence:"      & error.sequence'Image;
+        end if;
+
+        --Ada.Text_IO.Put_Line ("XFixes version info:" & replyVers.major_version'Image & "." & replyVers.minor_version'Image);
+
+        -- Create the region
+        region := xcb_xfixes_region_t(xcb_generate_id (c));
+
+        -- Ada.Text_IO.Put_Line ("Troodon: (compositor) Created new region ID:" & region'Image);
+
+        cookie := xcb_xfixes_create_region_checked (c              => c,
+                                                    region         => region,
+                                                    rectangles_len => 0,
+                                                    rectangles     => null);
+
+        -- Ada.Text_IO.Put_Line ("Troodon: (compositor) Create Region sequence#" & cookie.sequence'Image);
+
+        error := xcb_request_check (c, cookie);
+
+        if error /= null then
+            raise CompositorException with 
+                "Troodon: (compositor) Failed to create input pass-through region for overlay window, error:" & error.error_code'Image
+                    & " response type:" & error.response_type'Image
+                    & " major:"         & error.major_code'Image 
+                    & " minor:"         & error.minor_code'Image
+                    & " resource:"      & error.resource_id'Image
+                    & " sequence:"      & error.sequence'Image;
+        end if;
+
+        -- Set the window input shape
+        Ada.Text_IO.Put_Line ("Troodon: (compositor) Setting window shape region");
+
+        cookie := xcb_xfixes_set_window_shape_region_checked (c         => c,
+                                                              dest      => win,
+                                                              dest_kind => regionInput,
+                                                              x_offset  => 0,
+                                                              y_offset  => 0,
+                                                              region    => region);
+
+        error := xcb_request_check (c, cookie);
+
+        if error /= null then
+            raise CompositorException with "Troodon: (compositor) Failed to set input shape region on overlay window, error:" & error.error_code'Image;
+        end if;                                                              
+
+        -- Destroy the region
+        cookie := xcb_xfixes_destroy_region_checked (c, region);
+        error  := xcb_request_check (c, cookie);
+
+        if error /= null then
+            raise CompositorException with "Troodon: (compositor) Failed to destroy input shape region, error:" & error.error_code'Image;
+        end if;                                                              
+
+    end allowInputPassthrough;
+
 
     ---------------------------------------------------------------------------
     -- initCompositor
@@ -123,10 +225,10 @@ package body Compositor is
             updateMode := xcb_composite_redirect_t'Pos(XCB_COMPOSITE_REDIRECT_AUTOMATIC);
         end if;
 
+        -- Instruct the X Server to redirect all window output to off-screen buffers.
         cookie := xcb_composite_redirect_subwindows_checked (c      => c,
                                                              window => root,
                                                              update => updateMode);
-
 
         error := xcb_request_check (c, cookie);
 
@@ -136,7 +238,6 @@ package body Compositor is
         end if;
 
         if rend.kind = Render.OpenGL then
-            -- @TODO note if we can get the GLX context here, we don't need to do that check in Frame anymore
             cookieOvly := xcb_composite_get_overlay_window (c, root);
             replyOvly  := xcb_composite_get_overlay_window_reply (c, cookieOvly, error'Address);
 
@@ -148,7 +249,9 @@ package body Compositor is
 
             createGLOverlay (c, rend, replyOvly.overlay_win);
 
-            free (replyOvly);
+            -- Set overlay as pass-through. If we're using server-side compositing we don't
+            -- need to do this.
+            allowInputPassthrough (c, replyOvly.overlay_win);
 
             -- Attempt to get GLX_EXT_texture_from_pixmap extension.
             glXBindTexImageEXT    := toBindProc (GLX.glXGetProcAddress (procName1(0)'Access));
@@ -157,6 +260,8 @@ package body Compositor is
             if glXBindTexImageEXT = null or glXReleaseTexImageEXT = null then
                 raise CompositorException with "Failed to get glXBindTexImageEXT procedure";
             end if;
+
+            free (replyOvly);
         end if;
 
     end initCompositor;
@@ -269,18 +374,6 @@ package body Compositor is
         GL.glTexParameteri (target => GL.GL_TEXTURE_2D,
                             pname  => GL.GL_TEXTURE_MAG_FILTER,
                             param  => GL.GL_LINEAR);
-
-        -- Presumably glXBindTexImageEXT takes the place of this call?
-        -- -- Copy to texture2D
-        -- GL.glTexImage2D (target         => GL.GL_TEXTURE_2D,
-        --                  level          => 0,
-        --                  internalFormat => GL.GL_RGBA,
-        --                  width          => GL.GLsizei(geom.width),
-        --                  height         => GL.GLsizei(geom.height),
-        --                  border         => 0,
-        --                  format         => GL.GL_RGBA,
-        --                  c_type         => GL.GL_UNSIGNED_BYTE,
-        --                  pixels         => g.bitmap.buffer);
 
         -- Set up attribs/uniforms for shader program
         GLext.glUniformMatrix4fv (location  => Render.Shaders.winUniformOrtho,

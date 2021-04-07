@@ -59,19 +59,20 @@ begin
         -- Start desktop environment components
         Taskbar.Taskbar.Start;
 
-        -- Enter main WM event loop
         Events.eventLoop (connection, rend);
+
+        -- Cleanup
+        Render.Shaders.teardownShaders;
+
+        Ada.Text_IO.Put_Line ("Troodon: Disconnecting from X server.");
+        --xcb_disconnect (connection);
+        ignore := Xlib.XCloseDisplay (display);
+        --Ada.Text_IO.Put_Line ("Troodon: XCloseDisplay return code:" & ignore'Image);
     else
         Ada.Text_IO.Put_Line ("Unable to connect to X Server. Exiting.");
         Ada.Command_Line.Set_Exit_Status (1);
         return;
     end if;
-    
-    Ada.Text_IO.Put_Line ("Troodon: Disconnecting from X server.");
-    --xcb_disconnect (connection);
-    ignore := Xlib.XCloseDisplay (display);
-    
-    Ada.Text_IO.Put_Line ("Troodon: XCloseDisplay return code:" & ignore'Image);
     
     Ada.Text_IO.Put_Line ("Troodon: Going extinct.");
 end Main;

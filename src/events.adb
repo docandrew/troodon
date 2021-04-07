@@ -192,10 +192,10 @@ package body events is
         
         buttonEvent := toButtonEvent (event);
 
-        -- Ada.Text_IO.Put_Line ("Button press" & buttonEvent.detail'Image &
-        --                       " Modifier"    & buttonEvent.state'Image &
-        --                       " on window"   & buttonEvent.event'Image &
-        --                       " on child"    & buttonEvent.child'Image);
+        Ada.Text_IO.Put_Line ("Button press" & buttonEvent.detail'Image &
+                              " Modifier"    & buttonEvent.state'Image &
+                              " on window"   & buttonEvent.event'Image &
+                              " on child"    & buttonEvent.child'Image);
 
         if isFrame (buttonEvent.event) then
             f := getFrameFromList(buttonEvent.event); -- COPY?

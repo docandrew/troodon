@@ -25,6 +25,7 @@ project Troodon is
             "-lxcb-glx",
             "-lxcb-xfixes", 
             "-lxcb-randr", 
+            "-lxcb-shape",
             "-lxcb-xinerama",
             "-lX11-xcb", 
             "-lX11", 

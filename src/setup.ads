@@ -19,6 +19,9 @@ package setup is
     -- checkExtensions
     -- Make sure all X protocol extensions needed by Troodon are present.
     -- @return False if a required extension is missing, True otherwise.
+    --
+    -- This function will also save the names, opcodes, etc. of the extensions
+    -- in the Util package so prettyPrintErrors will work.
     ---------------------------------------------------------------------------
     function checkExtensions (c : access xcb.xcb_connection_t) return Boolean;
 

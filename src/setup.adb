@@ -15,6 +15,7 @@ with xcb_glx;
 with xcb_xfixes;
 with xcb_xinerama;
 with xcb_randr;
+with xcb_shape;
 
 with GLX;
 
@@ -30,6 +31,8 @@ package body Setup is
 
     ---------------------------------------------------------------------------
     -- checkExtensions    
+    -- @TODO we can use the extension's major, minor opcodes, etc. from the 
+    --  filled-in query to come up with a better error-reporting mechanism.
     ---------------------------------------------------------------------------
     function checkExtensions (c : access xcb_connection_t) return Boolean is
 
@@ -38,12 +41,14 @@ package body Setup is
         XFixesQuery     : access constant xproto.xcb_query_extension_reply_t;
         XineramaQuery   : access constant xproto.xcb_query_extension_reply_t;
         XRandrQuery     : access constant xproto.xcb_query_extension_reply_t;
+        XShapeQuery     : access constant xproto.xcb_query_extension_reply_t;
 
         hasGLX          : Boolean := False;
         hasXComposite   : Boolean := False;
         hasXFixes       : Boolean := False;
         hasXinerama     : Boolean := False;
         hasXRandr       : Boolean := False;
+        hasXShape       : Boolean := False;
     begin
         Ada.Text_IO.Put_Line ("Troodon: checking for required extensions...");
 
@@ -62,11 +67,15 @@ package body Setup is
         XRandrQuery     := xcb.xcb_get_extension_data (c   => c,
                                                        ext => xcb_randr.xcb_randr_id'Access);
 
+        XShapeQuery     := xcb.xcb_get_extension_data (c   => c,
+                                                       ext => xcb_shape.xcb_shape_id'Access);
+
         if GLXQuery         = null or
            XCompositeQuery  = null or
            XFixesQuery      = null or
            XineramaQuery    = null or
-           XRandrQuery      = null then
+           XRandrQuery      = null or
+           XShapeQuery      = null then
 
             raise SetupException with "Unable to get extension data from X Server";
         end if;
@@ -76,14 +85,21 @@ package body Setup is
         hasXFixes     := XFixesQuery.present /= 0;
         hasXinerama   := XineramaQuery.present /= 0;
         hasXRandr     := XRandrQuery.present /= 0;
+        hasXShape     := XShapeQuery.present /= 0;
 
         Ada.Text_IO.Put_Line (" GLX.......: " & (if hasGLX        then "Enabled" else "NOT ENABLED"));
         Ada.Text_IO.Put_Line (" XComposite: " & (if hasXComposite then "Enabled" else "NOT ENABLED"));
         Ada.Text_IO.Put_Line (" XFixes....: " & (if hasXFixes     then "Enabled" else "NOT ENABLED"));
         Ada.Text_IO.Put_Line (" Xinerama..: " & (if hasXinerama   then "Enabled" else "NOT ENABLED"));
         Ada.Text_IO.Put_Line (" XRandr....: " & (if hasXRandr     then "Enabled" else "NOT ENABLED"));
+        Ada.Text_IO.Put_Line (" XShape....: " & (if hasXShape     then "Enabled" else "NOT ENABLED"));
 
-        if (hasGLX and hasXComposite and hasXFixes and hasXinerama and hasXRandr) then
+        if (hasGLX and 
+            hasXComposite and
+            hasXFixes and
+            hasXinerama and
+            hasXRandr and
+            hasXShape) then
             return True;
         else
             --@TODO for missing extensions, offer helpful hints about how to obtain them or otherwise
@@ -100,14 +116,13 @@ package body Setup is
     -- setup.emwh will be non-null if this succeeds.
     ---------------------------------------------------------------------------
     procedure initEwmh(connection : access xcb_connection_t) is
-        --ewmhConn : aliased xcb_ewmh_connection_t;
         ewmhCookie : aliased access xcb_intern_atom_cookie_t;
-        ewmhError : aliased access xcb_generic_error_t;
-        ignore : Interfaces.C.unsigned_char;
-        ignore2 : Interfaces.C.int;
+        ewmhError  : aliased access xcb_generic_error_t;
+        ignore     : Interfaces.C.unsigned_char;
+        ignore2    : Interfaces.C.int;
     begin
-        ewmhCookie := xcb_ewmh_init_atoms(connection, ewmhObj'Access);
-        ignore := xcb_ewmh_init_atoms_replies(ewmhObj'Access, ewmhCookie, ewmhError'Address);
+        ewmhCookie := xcb_ewmh_init_atoms (connection, ewmhObj'Access);
+        ignore := xcb_ewmh_init_atoms_replies (ewmhObj'Access, ewmhCookie, ewmhError'Address);
 
         if ewmhError /= null then
             Ada.Text_IO.Put_Line("Error getting ewmh init atoms, error code:" & ewmhError.error_code'Image);
