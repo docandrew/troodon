@@ -35,6 +35,11 @@ package body Compositor is
     glXBindTexImageEXT    : GLXext.PFNGLXBINDTEXIMAGEEXTPROC;
     glXReleaseTexImageEXT : GLXext.PFNGLXRELEASETEXIMAGEEXTPROC;
 
+    -- If supported, the glXSwapInterval function can be used to provide vsync
+    -- for less screen tearing.
+    glxVSync              : Boolean := False;
+    glXSwapIntervalEXT    : GLXext.PFNGLXSWAPINTERVALEXTPROC;
+
     ---------------------------------------------------------------------------
     -- Keep a list of all the windows so we can re-draw them in stacking order.
     -- As a window is focused, we remove it and re-append it to the end of this
@@ -67,18 +72,23 @@ package body Compositor is
         if C /= No_Element then
             winStack.delete (C);
         else
-            raise CompositorException with "Attempted to bring non-existent window to top of render stack";
+            raise CompositorException with "Attempted to delete non-existent window from render stack";
         end if;
     end deleteWindow;
 
     ---------------------------------------------------------------------------
     -- bringToTop
+    -- It's not necessarily an error to call this with a window not in the
+    -- list.
     ---------------------------------------------------------------------------
     procedure bringToTop (win : xproto.xcb_window_t) is
         use WindowStack;
     begin
         deleteWindow (win);
         winStack.append (win);
+    exception
+        when CompositorException =>
+            raise CompositorException with "Attempted to bring non-existent window to top of render stack";
     end bringToTop;
 
     ---------------------------------------------------------------------------
@@ -146,27 +156,27 @@ package body Compositor is
         cookie      : xcb_void_cookie_t;
         error       : access xcb_generic_error_t;
 
-        cookieVersion : xcb_xfixes_query_version_cookie_t;
-        replyVersion  : access xcb_xfixes_query_version_reply_t;
+        -- cookieVersion : xcb_xfixes_query_version_cookie_t;
+        -- replyVersion  : access xcb_xfixes_query_version_reply_t;
         -- errorVers   : access xcb_generic_error_t;
     begin
         -- Need to explicitly query the XFixes version here, otherwise the create_region call fails.
-        cookieVersion := xcb_xfixes_query_version (c                    => c,
-                                                   client_major_version => 5,
-                                                   client_minor_version => 0);
+        -- cookieVersion := xcb_xfixes_query_version (c                    => c,
+        --                                            client_major_version => 5,
+        --                                            client_minor_version => 0);
 
-        replyVersion := xcb_xfixes_query_version_reply (c      => c,
-                                                        cookie => cookieVersion,
-                                                        e      => error'Address);
+        -- replyVersion := xcb_xfixes_query_version_reply (c      => c,
+        --                                                 cookie => cookieVersion,
+        --                                                 e      => error'Address);
 
-        if error /= null then
-            raise CompositorException with "Error getting XFixes version, " & error.error_code'Image
-                    & " response type:" & error.response_type'Image
-                    & " major:"         & error.major_code'Image 
-                    & " minor:"         & error.minor_code'Image
-                    & " resource:"      & error.resource_id'Image
-                    & " sequence:"      & error.sequence'Image;
-        end if;
+        -- if error /= null then
+        --     raise CompositorException with "Error getting XFixes version, " & error.error_code'Image
+        --             & " response type:" & error.response_type'Image
+        --             & " major:"         & error.major_code'Image 
+        --             & " minor:"         & error.minor_code'Image
+        --             & " resource:"      & error.resource_id'Image
+        --             & " sequence:"      & error.sequence'Image;
+        -- end if;
 
         --Ada.Text_IO.Put_Line ("XFixes version info:" & replyVers.major_version'Image & "." & replyVers.minor_version'Image);
 
@@ -227,7 +237,8 @@ package body Compositor is
     -- overlay window from the X server.
     ---------------------------------------------------------------------------
     procedure initCompositor(c    : access xcb_connection_t;
-                             rend : Render.Renderer) is
+                             rend : Render.Renderer;
+                             mode : CompositeMode) is
         use GLXext;
         use xcb;
         use xproto;
@@ -246,6 +257,7 @@ package body Compositor is
         -- Procedure name in C format for glxGetProcAddress
         procName1   : Interfaces.C.char_array := Interfaces.C.To_C ("glXBindTexImageEXT");
         procName2   : Interfaces.C.char_array := Interfaces.C.To_C ("glXReleaseTexImageEXT");
+        procName3   : Interfaces.C.char_array := Interfaces.C.To_C ("glXSwapIntervalEXT");
 
         procedure free is new Ada.Unchecked_Deallocation (Object => xcb_composite_get_overlay_window_reply_t,
                                                           Name   => OverlayReplyPtr);
@@ -255,17 +267,15 @@ package body Compositor is
 
         function toReleaseProc is new Ada.Unchecked_Conversion (Source => GLX.uu_GLXextFuncPtr,
                                                                 Target => GLXext.PFNGLXRELEASETEXIMAGEEXTPROC);
-    begin
-        composite := xcb_get_extension_data (c, xcb_composite_id'Access);
 
-        if composite.present /= 0 then
-            Ada.Text_IO.Put_Line ("Troodon: (compositor) Composite Extension Present.");
-        end if;
+        function toSyncProc is new Ada.Unchecked_Conversion (Source => GLX.uu_GLXextFuncPtr,
+                                                             Target => GLXext.PFNGLXSWAPINTERVALEXTPROC);
+    begin
 
         -- @TODO probably want to grab server before doing this or do this in Setup while
         -- we have it grabbed.
         -- If we don't have an OpenGL renderer, just let the server do basic compositing.
-        if rend.kind = Render.OPENGL then
+        if rend.kind = Render.OPENGL and mode = MANUAL then
             Ada.Text_IO.Put_Line ("Troodon: (compositor) Using manual redirection w/ OpenGL");
             updateMode := xcb_composite_redirect_t'Pos(XCB_COMPOSITE_REDIRECT_MANUAL);
         else
@@ -285,7 +295,7 @@ package body Compositor is
             raise CompositorException with "Failed to redirect subwindows";
         end if;
 
-        if rend.kind = Render.OpenGL then
+        if rend.kind = Render.OpenGL and mode = MANUAL then
             cookieOvly := xcb_composite_get_overlay_window (c, root);
             replyOvly  := xcb_composite_get_overlay_window_reply (c, cookieOvly, error'Address);
 
@@ -300,8 +310,10 @@ package body Compositor is
             -- Set overlay as pass-through. If we're using server-side compositing we don't
             -- need to do this.
             allowInputPassthrough (c, replyOvly.overlay_win);
+            free (replyOvly);
 
             -- Attempt to get GLX_EXT_texture_from_pixmap extension.
+            -- @TODO consider checking for availability before going through all this work.
             glXBindTexImageEXT    := toBindProc (GLX.glXGetProcAddress (procName1(0)'Access));
             glXReleaseTexImageEXT := toReleaseProc (GLX.glXGetProcAddress (procName2(0)'Access));
 
@@ -309,7 +321,17 @@ package body Compositor is
                 raise CompositorException with "Failed to get glXBindTexImageEXT procedure";
             end if;
 
-            free (replyOvly);
+            -- Attempt to get glXSwapInterval extension
+            glXSwapIntervalEXT := toSyncProc (GLX.glXGetProcAddress (procName3(0)'Access));
+
+            if glXSwapIntervalEXT /= null then
+                Ada.Text_IO.Put_Line ("Troodon: (compositor) Using glXSwapIntervalEXT extension");
+                --@TODO this doesn't seem to play nice with Xephyr, and gives screen tearing
+                -- anyhow.
+                --glxVSync := True;
+                --glXSwapIntervalEXT (rend.display, overlayDrawable, 1);
+            end if;
+
         end if;
 
     end initCompositor;
@@ -349,10 +371,18 @@ package body Compositor is
         -- GLX Pixmap/Texture vars
         Type GlXPixmapAttrList is array (Natural range <>) of aliased Interfaces.C.int;
 
-        glxPixmapAttr : GLXPixmapAttrList := (
+        glxPixmapAttrRGB : GLXPixmapAttrList := (
+            GLXext.GLX_TEXTURE_TARGET_EXT, GLXext.GLX_TEXTURE_2D_EXT,
+            GLXext.GLX_TEXTURE_FORMAT_EXT, GLXext.GLX_TEXTURE_FORMAT_RGB_EXT,
+            0);
+
+        glxPixmapAttrRGBA : GLXPixmapAttrList := (
             GLXext.GLX_TEXTURE_TARGET_EXT, GLXext.GLX_TEXTURE_2D_EXT,
             GLXext.GLX_TEXTURE_FORMAT_EXT, GLXext.GLX_TEXTURE_FORMAT_RGBA_EXT,
             0);
+
+        -- Default to RGB unless window is using 32-bit color depth.
+        glxPixmapAttr : access int := glxPixmapAttrRGB(0)'Access;
         
         glxPixmap : GLX.GLXPixmap;
 
@@ -361,7 +391,6 @@ package body Compositor is
         -- Destination quad to which the window shall be rendered
         dest   : Render.Util.Box;
     begin
-        --Ada.Text_IO.Put_Line ("Blitting window " & win'Image);
 
         -- Get window geometry
         geomWin := Util.getWindowGeometry (c, win);
@@ -381,12 +410,13 @@ package body Compositor is
 
         -- Get pixbuf of window's off-screen storage. We have to perform this step
         -- because a window's size may have changed between blits.
-        pixmap := xcb_pixmap_t(xcb_generate_id (c));
+        pixmap := xcb_generate_id (c);
 
         if pixmap = 0 then
             raise CompositorException with "Unable to generate new ID for pixmap";
         end if;
 
+        --@TODO issue here with child window when it contains different pixel sizes
         cookie := xcb_composite_name_window_pixmap_checked (c      => c,
                                                             window => win,
                                                             pixmap => pixmap);
@@ -396,7 +426,12 @@ package body Compositor is
         if error /= null then
             -- If off-screen pixmap isn't ready yet, just go ahead and bail.
             return;
-            --raise CompositorException with "Failed to get off-screen pixmap for window " & win'Image & "from X Composite extension, error:" & error.error_code'Image;
+        end if;
+        -- Ada.Text_IO.Put_Line ("Blitting window " & win'Image);
+
+        -- Determine color depth of window
+        if geomWin.depth = 32 then
+            glxPixmapAttr := glxPixmapAttrRGBA(0)'Access;
         end if;
 
         -- Need to bind to an intermediate GLX pixmap object first.
@@ -405,10 +440,11 @@ package body Compositor is
         glxPixmap := GLX.glXCreatePixmap (dpy        => rend.display,
                                           config     => rend.fbConfig,
                                           the_pixmap => X11.Pixmap(pixmap),
-                                          attribList => glxPixmapAttr(0)'Access);
+                                          attribList => glxPixmapAttr);
 
-        GLext.glUseProgram (Render.Shaders.winShaderProg);
 
+        -- TODO: generate all the quads at once, load all textures at once, then
+        -- index into the quad array for each window.
         GL.glGenTextures (1, tex'Access);
         GL.glBindTexture (GL.GL_TEXTURE_2D, tex);
         
@@ -466,7 +502,6 @@ package body Compositor is
 
         GLext.glDisableVertexAttribArray (GL.GLuint(Render.Shaders.winAttribCoord));
 
-        GLext.glUseProgram (0);
     end blitWindow;
 
     -------------------------------------------------------------------------------
@@ -479,19 +514,26 @@ package body Compositor is
     -------------------------------------------------------------------------------
     procedure blitAll (c    : access xcb.xcb_connection_t;
                        rend : Render.Renderer) is
+        use xcb;
+        use xproto;
+
         glxRet : int;
+        cookie : xcb_void_cookie_t;
     begin
         -- To ensure all window pixmaps are in a coherent state, and not mid-copy:
         --
         -- receive request for compositing
-        -- grab server
-        -- glXWaitX? (to avoid screen tearing I think)
+        cookie := xcb_grab_server (c);
+
+        GLext.glUseProgram (Render.Shaders.winShaderProg);
 
         -- perform rendering/compositing
         glxRet := GLX.glXMakeContextCurrent (dpy  => rend.display,
                                              draw => overlayDrawable,
                                              read => overlayDrawable,
                                              ctx  => rend.context);
+
+        GLX.glXWaitX; -- Complete X work prior to GL call
 
         GL.glClearColor (red   => 0.7,
                          green => 0.7,
@@ -505,7 +547,9 @@ package body Compositor is
         end loop;
 
         GLX.glXSwapBuffers (rend.display, overlayDrawable);
+        GLext.glUseProgram (0);
+ 
+        cookie := xcb_ungrab_server (c);
 
-        -- ungrab server
     end blitAll;
 end Compositor;

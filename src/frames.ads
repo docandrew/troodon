@@ -7,7 +7,7 @@ with GLX;
 with xcb;
 with xproto; use xproto;
 
-with render;
+with Render;
 
 -------------------------------------------------------------------------------
 -- Frames in Troodon are the X Windows used for reparenting other application
@@ -15,7 +15,9 @@ with render;
 -- with additional information, such as which application window is associated
 -- with this frame (and vice versa), rendering information, and other state.
 -------------------------------------------------------------------------------
-package frames is
+package Frames is
+
+    FrameException : exception;
 
     ---------------------------------------------------------------------------
     -- @field connection is the xcb connection in use
@@ -40,6 +42,7 @@ package frames is
 
         focused     : Boolean;
         grabbed     : Boolean;
+        dragging    : Boolean;
     end record;
 
     ---------------------------------------------------------------------------
@@ -68,6 +71,18 @@ package frames is
     -- was using and removing it from the list of frames.
     ---------------------------------------------------------------------------
     procedure unFrameWindow (f : Frame);
+
+    ---------------------------------------------------------------------------
+    -- startDrag
+    -- Set the Frame with a given FrameID to dragging.
+    ---------------------------------------------------------------------------
+    procedure startDrag (frameID : xproto.xcb_window_t);
+
+    ---------------------------------------------------------------------------
+    -- stopDrag
+    -- Stop dragging any and all frames.
+    ---------------------------------------------------------------------------
+    procedure stopDrag;
 
     ---------------------------------------------------------------------------
     -- focus

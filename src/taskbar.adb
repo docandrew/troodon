@@ -111,8 +111,8 @@ package body taskbar is
         taskbarAttr.event_mask := XCB_EVENT_MASK_EXPOSURE;
         
         cookie :=
-           xcb_create_window_aux(c              => connection, 
-                                 depth          => XCB_COPY_FROM_PARENT, 
+           xcb_create_window_aux(c              => connection,
+                                 depth          => 32,
                                  wid            => window,
                                  parent         => screen.root,
                                  x              => 0,

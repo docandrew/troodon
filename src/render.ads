@@ -54,8 +54,8 @@ package Render is
     -- getFBConfig
     -- Query the X Server for an acceptable framebuffer configuration.
     ---------------------------------------------------------------------------
-    function getFBConfig (connection : not null access xcb.xcb_connection_t;
-                          display    : not null access Xlib.Display) return GLX.GLXFBConfig;
+    -- function getFBConfig (connection : not null access xcb.xcb_connection_t;
+    --                       display    : not null access Xlib.Display) return GLX.GLXFBConfig;
 
     ---------------------------------------------------------------------------
     -- initRendering

@@ -15,15 +15,17 @@ package Setup is
     -- Contains atom values for EWMH properties if EWMH is available.
     ewmh : access xcb_ewmh.xcb_ewmh_connection_t := null;
 
+    -- Keep visual ID's with desired color depths that we can use to create
+    -- windows.
+    -- visual24 : xproto.xcb_visualid_t;
+    -- visual32 : xproto.xcb_visualid_t;
+
     ---------------------------------------------------------------------------
-    -- checkExtensions
+    -- initExtensions
     -- Make sure all X protocol extensions needed by Troodon are present.
-    -- @return False if a required extension is missing, True otherwise.
-    --
-    -- This function will also save the names, opcodes, etc. of the extensions
-    -- in the Util package so prettyPrintErrors will work.
+    -- Raise SetupException is anything required is missing.
     ---------------------------------------------------------------------------
-    function checkExtensions (c : access xcb.xcb_connection_t) return Boolean;
+    procedure initExtensions (c : access xcb.xcb_connection_t);
 
     function initXlib return access Xlib.Display;
     function initXcb (display : not null access Xlib.Display) return access xcb.xcb_connection_t;

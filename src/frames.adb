@@ -77,6 +77,8 @@ package body Frames is
         cookie := xcb_map_window (c      => f.connection,
                                   window => f.appWindow);
 
+        Ada.Text_IO.Put_Line (" mapped" & f.appWindow'Image);
+
         focus(f.frameID);
     end map;
 
@@ -107,6 +109,8 @@ package body Frames is
         winH : Float;
 
         glErr : GL.GLenum;
+
+        dragAlpha : Float := (if f.dragging then 0.5 else 1.0);
     begin
         -- Ada.Text_IO.Put_Line("Enter drawTitleBar");
 
@@ -146,13 +150,13 @@ package body Frames is
                 GL.glClearColor (red   => FRAME_BG_GL_FOCUSED.r,
                                  green => FRAME_BG_GL_FOCUSED.g,
                                  blue  => FRAME_BG_GL_FOCUSED.b,
-                                 alpha => 1.0); --FRAME_BG_GL_FOCUSED.a);
+                                 alpha => dragAlpha);
             else
                 --Ada.Text_IO.Put_Line ("Drawing un-focused window");
                 GL.glClearColor (red   => FRAME_BG_GL.r,
                                  green => FRAME_BG_GL.g,
                                  blue  => FRAME_BG_GL.b,
-                                 alpha => 1.0); --FRAME_BG_GL.a);
+                                 alpha => dragAlpha);
             end if;
 
             GL.glClear (GL.GL_COLOR_BUFFER_BIT);
@@ -308,13 +312,16 @@ package body Frames is
         use xproto;
         use render;
 
+        f       : Frame;
         geom    : xcb_get_geometry_reply_t;
         screen  : access xcb_screen_t;
         cookie  : xcb_void_cookie_t;
+        error   : access xcb_generic_error_t;
         result  : Interfaces.C.int;
         title   : Ada.Strings.Unbounded.Unbounded_String;
-        --frameID : xcb_window_t;
-        f     : Frame;
+
+        -- Stuff to get a 32-bit window
+        colormap : xcb_colormap_t;
 
         frameCreateAttributes : aliased xcb_create_window_value_list_t;
         appAttributes         : aliased xcb_change_window_attributes_value_list_t;
@@ -330,6 +337,22 @@ package body Frames is
         -- Create new parent window for frame
         f.frameID := xcb_generate_id (connection);
 
+        -- Create new colormap
+        -- colormap := xcb_generate_id (connection);
+
+        -- cookie := xcb_create_colormap_checked (c      => connection, 
+        --                                        alloc  => xcb_colormap_alloc_t'Pos(XCB_COLORMAP_ALLOC_NONE),
+        --                                        mid    => colormap,
+        --                                        window => screen.root,
+        --                                        visual => Setup.visual32);
+                                               --visual => rend.visualID);
+        
+        error := xcb_request_check (connection, cookie);
+
+        if error /= null then
+            raise FrameException with "Troodon: (Frame) Failed to create colormap, error:" & error.error_code'Image;
+        end if;
+
         -- See what name the app is trying to use. Try these until we find one.
         if setup.ewmh /= null then
             title := Util.getStringProperty (connection, window, setup.ewmh.u_NET_WM_NAME);
@@ -344,9 +367,15 @@ package body Frames is
         end if;
 
         -- Setup frame attributes here. If we're using OpenGL then the background pixel
-        -- won't matter.        
+        -- won't matter.
+        -- @Note that if our color depth differs from the parent depth, we need 
+        -- to set back pixel, border pixel _and_ colormap.
+        --
+        -- See https://stackoverflow.com/questions/3645632/how-to-create-a-window-with-a-bit-depth-of-32
+        --
         frameCreateAttributes.background_pixel := FRAME_BG;
         frameCreateAttributes.border_pixel := FRAME_BORDER;
+        frameCreateAttributes.colormap := rend.colormap; -- colormap
         frameCreateAttributes.event_mask :=
            XCB_EVENT_MASK_EXPOSURE or               -- window needs to be redrawn
            XCB_EVENT_MASK_STRUCTURE_NOTIFY or       -- frame is destroyed
@@ -358,26 +387,35 @@ package body Frames is
            XCB_EVENT_MASK_ENTER_WINDOW or           -- so we can change cursor for resize...
            XCB_EVENT_MASK_LEAVE_WINDOW;             -- ...and change it back.
         
-        frameValueMask := XCB_CW_BACK_PIXEL or XCB_CW_BORDER_PIXEL or XCB_CW_EVENT_MASK;
+        frameValueMask := XCB_CW_BACK_PIXEL or
+                          XCB_CW_BORDER_PIXEL or
+                          XCB_CW_COLORMAP or
+                          XCB_CW_EVENT_MASK;
 
         f.width  := Natural(geom.width) + 2 * FRAME_BORDER_WIDTH;
         f.height := Natural(geom.height + 2 * FRAME_BORDER_WIDTH + TITLEBAR_HEIGHT);
 
         -- Create actual frame window
         cookie :=
-           xcb_create_window_aux (c            => connection, 
-                                  depth        => XCB_COPY_FROM_PARENT, 
-                                  wid          => f.frameID,
-                                  parent       => screen.root, 
-                                  x            => geom.x,
-                                  y            => geom.y,
-                                  width        => unsigned_short(f.width),
-                                  height       => unsigned_short(f.height),
-                                  border_width => 0,   -- @TODO for development. We'll draw our own frames later.
-                                  u_class      => xcb_window_class_t'Pos (XCB_WINDOW_CLASS_INPUT_OUTPUT), 
-                                  visual       => rend.visualID,
-                                  value_mask   => frameValueMask,
-                                  value_list   => frameCreateAttributes'Access);
+           xcb_create_window_aux_checked (c            => connection,
+                                          depth        => 32,
+                                          wid          => f.frameID,
+                                          parent       => screen.root,
+                                          x            => geom.x,
+                                          y            => geom.y,
+                                          width        => unsigned_short(f.width),
+                                          height       => unsigned_short(f.height),
+                                          border_width => 0,   -- @TODO for development. We'll draw our own frames later.
+                                          u_class      => xcb_window_class_t'Pos (XCB_WINDOW_CLASS_INPUT_OUTPUT), 
+                                          visual       => rend.visualID, -- 
+                                          value_mask   => frameValueMask,
+                                          value_list   => frameCreateAttributes'Access);
+
+        error := xcb_request_check (connection, cookie);
+
+        if error /= null then
+            raise FrameException with "Troodon: (Frame) Failed to create window, error:" & error.error_code'Image;
+        end if;
 
 
         -- we'll use the UTF-8 title if the app set one. we set the property on the frame
@@ -411,7 +449,7 @@ package body Frames is
                                            data     => To_String(title)'Address);
         end if;
 
-        -- Grab button presses so we can raise window to the top.
+        -- Grab button presses in frame
         cookie := xcb_grab_button (c             => connection,
                                    owner_events  => 0,
                                    grab_window   => window, 
@@ -434,7 +472,6 @@ package body Frames is
                                        x      => FRAME_BORDER_WIDTH,
                                        y      => FRAME_BORDER_WIDTH + TITLEBAR_HEIGHT);
 
-        -- Must map window prior to glXMakeContextCurrent
         cookie := xcb_map_window (c => connection, window => f.frameID);
         cookie := xcb_map_window (c => connection, window => window);
 
@@ -444,6 +481,7 @@ package body Frames is
         f.title             := title;
         f.focused           := False;
         f.grabbed           := True;
+        f.dragging          := False;
 
         -- If using OpenGL renderer, create GLX window here out of our mapped window
         if rend.kind = render.OPENGL then
@@ -470,6 +508,36 @@ package body Frames is
         -- @TODO cleanup the GLX context, etc.
         allFrames.Delete (f.appWindow);
     end unFrameWindow;
+
+    ---------------------------------------------------------------------------
+    -- startDrag
+    -- Set this frame as "Dragging" so it can change the way it draws itself.
+    ---------------------------------------------------------------------------
+    procedure startDrag (frameID : xproto.xcb_window_t)
+    is
+        use FrameMap;
+    begin
+        for f of allFrames loop
+            if f.frameID = frameID then
+                f.dragging := True;
+            else
+                f.dragging := False;
+            end if;
+        end loop;
+    end startDrag;
+
+    ---------------------------------------------------------------------------
+    -- stopDrag
+    -- Stop dragging all frames
+    ---------------------------------------------------------------------------
+    procedure stopDrag
+    is
+        use FrameMap;
+    begin
+        for f of allFrames loop
+            f.dragging := False;
+        end loop;
+    end stopDrag;
 
     ---------------------------------------------------------------------------
     -- Focus
@@ -501,6 +569,9 @@ package body Frames is
                                                 window     => win,
                                                 value_mask => unsigned_short (XCB_CONFIG_WINDOW_STACK_MODE),
                                                 value_list => winAttr'Access);
+
+            -- We may not have gotten the CreateNotify yet for this frame.
+            Compositor.bringToTop (win);
 
         end raiseToTop;
     begin
@@ -560,15 +631,15 @@ package body Frames is
                 -- @TODO Might be able to skip this check too
                 if f.grabbed = False then
                     cookie := xcb_grab_button (c             => f.connection,
-                                            owner_events  => 0,
-                                            grab_window   => f.appWindow,
-                                            event_mask    => unsigned_short(XCB_EVENT_MASK_BUTTON_PRESS), 
-                                            pointer_mode  => unsigned_char(xcb_grab_mode_t'Pos(XCB_GRAB_MODE_SYNC)),
-                                            keyboard_mode => unsigned_char(xcb_grab_mode_t'Pos(XCB_GRAB_MODE_ASYNC)),
-                                            confine_to    => XCB_NONE,
-                                            cursor        => XCB_NONE,
-                                            button        => 1,
-                                            modifiers     => unsigned_short(XCB_MOD_MASK_ANY));
+                                               owner_events  => 0,
+                                               grab_window   => f.appWindow,
+                                               event_mask    => unsigned_short(XCB_EVENT_MASK_BUTTON_PRESS), 
+                                               pointer_mode  => unsigned_char(xcb_grab_mode_t'Pos(XCB_GRAB_MODE_SYNC)),
+                                               keyboard_mode => unsigned_char(xcb_grab_mode_t'Pos(XCB_GRAB_MODE_ASYNC)),
+                                               confine_to    => XCB_NONE,
+                                               cursor        => XCB_NONE,
+                                               button        => 1,
+                                               modifiers     => unsigned_short(XCB_MOD_MASK_ANY));
                     f.grabbed := True;
                 end if;
 

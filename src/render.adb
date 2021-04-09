@@ -1,4 +1,5 @@
 with Ada.Text_IO;
+with Ada.Unchecked_Deallocation;
 with Interfaces.C; use Interfaces.C;
 with Interfaces.C.Strings; use Interfaces.C.Strings;
 with System; use System;
@@ -11,6 +12,7 @@ with GLX;
 with Xlib;
 with Xutil;
 with xcb;
+with xcb_render;
 with xproto;
 
 with setup;
@@ -67,24 +69,64 @@ package body render is
     end initSoftwareRenderer;
 
     ---------------------------------------------------------------------------
+    -- printFBConfig
+    -- dump information about a particular GLX Framebuffer configuration
+    ---------------------------------------------------------------------------
+    procedure printFBConfig (display : not null access Xlib.Display;
+                             fb : GLX.GLXFBConfig) is
+            -- GLX framebuffer attributes
+            glxRet : int;
+            vtype  : aliased int;
+            depth  : aliased int;
+            size   : aliased int;
+            dbuf   : aliased int;
+            bitsR  : aliased int;
+            bitsG  : aliased int;
+            bitsB  : aliased int;
+            bitsA  : aliased int;
+            vid    : aliased int;
+        begin
+            glxRet := GLX.glXGetFBConfigAttrib (display, fb, GLX.GLX_VISUAL_ID,     vid'Access);
+            glxRet := GLX.glXGetFBConfigAttrib (display, fb, GLX.GLX_X_VISUAL_TYPE, vtype'Access);
+            glxRet := GLX.glXGetFBConfigAttrib (display, fb, GLX.GLX_DEPTH_SIZE,    depth'Access);
+            glxRet := GLX.glXGetFBConfigAttrib (display, fb, GLX.GLX_BUFFER_SIZE,   size'Access);
+            glxRet := GLX.glXGetFBConfigAttrib (display, fb, GLX.GLX_DOUBLEBUFFER,  dbuf'Access);
+            glxRet := GLX.glXGetFBConfigAttrib (display, fb, GLX.GLX_RED_SIZE,      bitsR'Access);
+            glxRet := GLX.glXGetFBConfigAttrib (display, fb, GLX.GLX_GREEN_SIZE,    bitsG'Access);
+            glxRet := GLX.glXGetFBConfigAttrib (display, fb, GLX.GLX_BLUE_SIZE,     bitsB'Access);
+            glxRet := GLX.glXGetFBConfigAttrib (display, fb, GLX.GLX_ALPHA_SIZE,    bitsA'Access);
+            
+            Ada.Text_IO.Put_Line ("Troodon: (Render) GLX Framebuffer Configuration:");
+            Ada.Text_IO.Put_Line (" Visual ID.......:" & vid'Image);
+            Ada.Text_IO.Put_Line (" Visual Type.....: " & (if vtype = GLX.GLX_TRUE_COLOR then "True Color" else "Not True Color"));
+            Ada.Text_IO.Put_Line (" Depth Size......:" & depth'Image);
+            Ada.Text_IO.Put_Line (" Buffer Size.....:" & size'Image);
+            Ada.Text_IO.Put_Line (" Double Buffer...: " & (if dbuf = 1 then "Yes" else "No"));
+            Ada.Text_IO.Put_Line (" Red Bits........:" & bitsR'Image);
+            Ada.Text_IO.Put_Line (" Green Bits......:" & bitsG'Image);
+            Ada.Text_IO.Put_Line (" Blue Bits.......:" & bitsB'Image);
+            Ada.Text_IO.Put_Line (" Alpha Bits......:" & bitsA'Image);
+    end printFBConfig;
+
+    ---------------------------------------------------------------------------
     -- getFBConfig
     -- Query the X Server for an acceptable framebuffer configuration.
     ---------------------------------------------------------------------------
-    function getFBConfig (connection : not null access xcb.xcb_connection_t;
-                          display    : not null access Xlib.Display) return GLX.GLXFBConfig
+    procedure getFBConfig (connection : not null access xcb.xcb_connection_t;
+                           display    : not null access Xlib.Display;
+                           fbConfig   : out GLX.GLXFBConfig;
+                           visualID   : out xproto.xcb_visualid_t)
     is
         use GLX;
 
-        glxRet        : int;
-        fbConfig      : GLX.GLXFBConfig := null;
-        fbConfigAddr  : System.Address;
+        fbConfigsAddr : System.Address;
         fbConfigCount : aliased int;
 
-        visualAttribs : GLX.IntArray(1..23) := (
-            GLX_X_RENDERABLE,   1,
+        visualAttribs : GLX.IntArray(1..19) := (
+            -- GLX_X_RENDERABLE,   1,
             GLX_DRAWABLE_TYPE,  GLX_WINDOW_BIT,
             GLX_RENDER_TYPE,    GLX_RGBA_BIT,
-            GLX_X_VISUAL_TYPE,  GLX_TRUE_COLOR,
+            -- GLX_X_VISUAL_TYPE,  GLX_TRUE_COLOR,
             GLX_RED_SIZE,       8,
             GLX_GREEN_SIZE,     8,
             GLX_BLUE_SIZE,      8,
@@ -94,29 +136,100 @@ package body render is
             GLX_DOUBLEBUFFER,   1,
             0
         );
+    
     begin
-        -- Setup Frame Buffer Configuration
-        fbConfigAddr := GLX.glXChooseFBConfig (dpy        => display,
+        -- Find a list of suitable framebuffer configurations
+        fbConfigsAddr := GLX.glXChooseFBConfig (dpy       => display,
                                                screen     => Xlib.XDefaultScreen(display),
                                                attribList => visualAttribs,
                                                nitems     => fbConfigCount'Access);
 
-        if fbConfigAddr = System.Null_Address or fbConfigCount = 0 then
-            Ada.Text_IO.Put_Line("Troodon: Unable to get GLX framebuffer config");
-            raise OpenGLException;
+        if fbConfigsAddr = System.Null_Address or fbConfigCount = 0 then
+            raise OpenGLException with "Troodon: (Render) Unable to get GLX framebuffer config";
         end if;
 
-        Ada.Text_IO.Put_Line("Troodon: Found" & fbConfigCount'Image & " matching GLX framebuffer configurations");
+        Ada.Text_IO.Put_Line("Troodon: (Render) Found" & fbConfigCount'Image & " potential GLX framebuffer configurations");
 
-        -- pick the first FB config, get visual ID
-        declare
+        -- Apparently the trick here to supporting transparency is to ask for an
+        -- alpha channel as well as make sure that there is an alpha mask in
+        -- the XRenderPictFormat.
+        -- h/t datenwolf
+        -- https://stackoverflow.com/questions/4052940/how-to-make-an-opengl-rendering-context-with-transparent-background
+        --
+        -- This code here is analogous to XRenderFindVisualFormat
+        findVisualFormat: declare
+            use xcb_render;
+
             fbConfigs : GLX.GLXFBConfigArray (1..Integer(fbConfigCount)) with
-                Import, Address => fbConfigAddr;
-        begin
-            fbConfig := fbConfigs(1);
-        end;
+                Import, Address => fbConfigsAddr;
 
-        return fbConfig;
+            type PictFormatReply is access all xcb_render_query_pict_formats_reply_t;
+
+            visual  : access XUtil.XVisualInfo;
+            cookie  : xcb_render_query_pict_formats_cookie_t;
+            formats : PictFormatReply;
+            screens : aliased xcb_render_pictscreen_iterator_t;
+            depths  : aliased xcb_render_pictdepth_iterator_t;
+            visuals : aliased xcb_render_pictvisual_iterator_t;
+            doofers : aliased xcb_render_pictforminfo_iterator_t;
+
+            procedure free is new Ada.Unchecked_Deallocation (Object => xcb_render_query_pict_formats_reply_t,
+                                                              Name   => PictFormatReply);
+        begin
+
+            -- Get formats 
+            cookie := xcb_render_query_pict_formats (connection);
+            formats := xcb_render_query_pict_formats_reply (connection, cookie, System.Null_Address);
+
+            for fb of fbConfigs loop
+                visual := GLX.glXGetVisualFromFBConfig (display, fb);
+
+                -- For some reason 
+                if visual /= null and then visual.depth = 32 then
+                    screens := xcb_render_query_pict_formats_screens_iterator (formats);
+
+                    while screens.c_rem >= 0 loop
+                        depths := xcb_render_pictscreen_depths_iterator (screens.data);
+
+                        while depths.c_rem >= 0 loop
+                            visuals := xcb_render_pictdepth_visuals_iterator (depths.data);
+
+                            while visuals.c_rem >= 0 loop
+                                if visuals.data.visual = xproto.xcb_visualid_t(visual.the_visualid) then
+                                    doofers := xcb_render_query_pict_formats_formats_iterator (formats);
+
+                                    while doofers.c_rem >= 0 loop
+                                        if doofers.data.direct.alpha_mask > 0 then
+                                            -- we found it!
+                                            Ada.Text_IO.Put_Line ("Troodon: (Render) WE FOUND IT!");
+                                            
+                                            visualID := xproto.xcb_visualid_t(visual.the_visualid);
+                                            fbConfig := fb;
+                                            
+                                            free (formats);
+
+                                            return;
+                                        end if;
+
+                                        xcb_render_pictforminfo_next (doofers'Access);
+                                    end loop;
+                                end if;
+
+                                xcb_render_pictvisual_next (visuals'Access);
+                            end loop;
+
+                            xcb_render_pictdepth_next (depths'Access);
+                        end loop;
+
+                        xcb_render_pictscreen_next (screens'Access);
+                    end loop;
+                end if;
+            end loop;
+
+        free (formats);
+        end findVisualFormat;
+
+        raise OpenGLException with "Troodon: (Render) Unable to find a suitable framebuffer configuration and/or visual.";
     end getFBConfig;
 
     ---------------------------------------------------------------------------
@@ -128,39 +241,42 @@ package body render is
     is
         use GLX;
 
-        glxRet        : int;
-        visualID      : aliased int;
         glxContext    : GLX.GLXContext;
         colormap      : xproto.xcb_colormap_t;
         cookie        : xcb.xcb_void_cookie_t;
-        fbConfig      : GLX.GLXFBConfig;
+
+        fb            : GLX.GLXFBConfig;
+        visualID      : xproto.xcb_visualid_t;
+
     begin
 
-        fbConfig := getFBConfig(connection, display);
+        getFBConfig (connection, display, fb, visualID);
+        printFBConfig (display, fb);
 
-        glxRet := GLX.glXGetFBConfigAttrib (dpy       => display,
-                                            config    => fbConfig,
-                                            attribute => GLX.GLX_VISUAL_ID,
-                                            value     => visualID'Access);
+        -- glxRet := GLX.glXGetFBConfigAttrib (dpy       => display,
+        --                                     config    => fbConfig,
+        --                                     attribute => GLX.GLX_VISUAL_ID,
+        --                                     value     => visualID'Access);
 
-        if glxRet = GLX.GLX_NO_EXTENSION or glxRet = GLX_BAD_ATTRIBUTE then
-            Ada.Text_IO.Put_Line ("Troodon: queried GLX for Visual ID, but does not exist.");
-            raise OpenGLException;
-        end if;
+        
+        Ada.Text_IO.Put_Line ("Troodon: (Render) Using Visual ID" & visualID'Image);
 
-        Ada.Text_IO.Put_Line ("Troodon: Creating GLX Context");
+        -- if glxRet = GLX.GLX_NO_EXTENSION or glxRet = GLX_BAD_ATTRIBUTE then
+        --     raise OpenGLException with "Troodon: (Render) queried GLX for Visual ID, but does not exist.";
+        -- end if;
+
+        Ada.Text_IO.Put_Line ("Troodon: (Render) Creating GLX Context");
         glxContext := GLX.glXCreateNewContext (dpy         => display,
-                                               config      => fbConfig,
+                                               config      => fb,
                                                renderType  => GLX.GLX_RGBA_TYPE,
                                                shareList   => null,
                                                direct      => 1);
 
         if glxContext = null then
-            Ada.Text_IO.Put_Line ("Troodon: Failed to create new GLX Context");
-            raise OpenGLException;
+            raise OpenGLException with "Troodon: Failed to create new GLX Context";
         end if;
 
-        Ada.Text_IO.Put_Line ("Troodon: Created new GLX context");
+        Ada.Text_IO.Put_Line ("Troodon: (Render) Created new GLX context");
 
         -- Create XIDs for colormap
         colormap := xcb.xcb_generate_id (connection);
@@ -170,21 +286,22 @@ package body render is
                                               alloc  => xproto.xcb_colormap_alloc_t'Pos(xproto.XCB_COLORMAP_ALLOC_NONE),
                                               mid    => colormap,
                                               window => setup.getRootWindow (connection),
-                                              visual => xproto.xcb_visualid_t (visualID));
+                                              visual => visualID);
 
         if xcb.xcb_request_check (connection, cookie) /= null then
             Ada.Text_IO.Put_Line( "Troodon: Unable to create colormap");
             raise OpenGLException;
         end if;
 
+
         Ada.Text_IO.Put_Line ("Troodon: Using OpenGL Renderer!");
 
         return R : Renderer := (OPENGL,
                                 display  => display,
-                                visualID => xproto.xcb_visualid_t(visualID),
+                                visualID => visualID,
                                 context  => glxContext,
                                 colormap => colormap,
-                                fbConfig => fbConfig);
+                                fbConfig => fb);
     exception
         when OpenGLException => return initSoftwareRenderer(connection);
     end initRendering;

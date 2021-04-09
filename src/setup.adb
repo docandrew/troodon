@@ -15,6 +15,7 @@ with xcb_glx;
 with xcb_xfixes;
 with xcb_xinerama;
 with xcb_randr;
+with xcb_render;
 with xcb_shape;
 
 with GLX;
@@ -30,16 +31,17 @@ package body Setup is
     ewmhObj : aliased xcb_ewmh_connection_t;
 
     ---------------------------------------------------------------------------
-    -- checkExtensions    
+    -- initExtensions    
     -- @TODO we can use the extension's major, minor opcodes, etc. from the 
     --  filled-in query to come up with a better error-reporting mechanism.
     ---------------------------------------------------------------------------
-    function checkExtensions (c : access xcb_connection_t) return Boolean is
+    procedure initExtensions (c : access xcb_connection_t) is
         use xcb_glx;
         use xcb_composite;
         use xcb_xfixes;
         use xcb_xinerama;
         use xcb_randr;
+        use xcb_render;
         use xcb_shape;
 
         GLXQuery               : access constant xproto.xcb_query_extension_reply_t;
@@ -67,6 +69,11 @@ package body Setup is
         XRandrVersionQuery     : xcb_randr_query_version_cookie_t;
         XRandrVersionReply     : access xcb_randr_query_version_reply_t;
         
+        XRenderQuery            : access constant xproto.xcb_query_extension_reply_t;
+        hasXRender              : Boolean := False;
+        XRenderVersionQuery     : xcb_render_query_version_cookie_t;
+        XRenderVersionReply     : access xcb_render_query_version_reply_t;
+
         XShapeQuery            : access constant xproto.xcb_query_extension_reply_t;
         hasXShape              : Boolean := False;
         XShapeVersionQuery     : xcb_shape_query_version_cookie_t;
@@ -91,6 +98,9 @@ package body Setup is
         XRandrQuery     := xcb.xcb_get_extension_data (c   => c,
                                                        ext => xcb_randr.xcb_randr_id'Access);
 
+        XRenderQuery    := xcb.xcb_get_extension_data (c   => c,
+                                                       ext => xcb_render.xcb_render_id'Access);
+
         XShapeQuery     := xcb.xcb_get_extension_data (c   => c,
                                                        ext => xcb_shape.xcb_shape_id'Access);
 
@@ -99,6 +109,7 @@ package body Setup is
            XFixesQuery      = null or
            XineramaQuery    = null or
            XRandrQuery      = null or
+           XRenderQuery     = null or
            XShapeQuery      = null then
 
             raise SetupException with "Unable to get extension data from X Server";
@@ -109,14 +120,15 @@ package body Setup is
         hasXFixes     := XFixesQuery.present /= 0;
         hasXinerama   := XineramaQuery.present /= 0;
         hasXRandr     := XRandrQuery.present /= 0;
+        hasXRender    := XRenderQuery.present /= 0;
         hasXShape     := XShapeQuery.present /= 0;
 
         if not (hasGLX    and hasXComposite and
                 hasXFixes and hasXinerama and
-                hasXRandr and hasXShape) then
+                hasXRandr and hasXRender and
+                hasXShape) then
             --@TODO for missing extensions, offer helpful hints about how to obtain them or otherwise
-            Ada.Text_IO.Put_Line (" One or more required extensions is not enabled on the X Server, cannot run Troodon.");
-            return False;
+            raise SetupException with " One or more required extensions is not enabled on the X Server, cannot run Troodon.";
         end if;
 
         -- Enable required extension versions
@@ -159,11 +171,10 @@ package body Setup is
         Ada.Text_IO.Put_Line (" XFixes....: " & (if hasXFixes     then "Enabled" else "NOT ENABLED") & " version" & XFixesVersionReply.major_version'Image & "." & XFixesVersionReply.minor_version'Image);
         Ada.Text_IO.Put_Line (" Xinerama..: " & (if hasXinerama   then "Enabled" else "NOT ENABLED"));
         Ada.Text_IO.Put_Line (" XRandr....: " & (if hasXRandr     then "Enabled" else "NOT ENABLED"));
+        Ada.Text_IO.Put_Line (" XRender...: " & (if hasXRender    then "Enabled" else "NOT ENABLED"));
         Ada.Text_IO.Put_Line (" XShape....: " & (if hasXShape     then "Enabled" else "NOT ENABLED"));
 
-        return True;        
-
-    end checkExtensions;
+    end initExtensions;
 
     ---------------------------------------------------------------------------
     -- initEwmh
@@ -299,7 +310,12 @@ package body Setup is
         screenNumber : aliased int;
         screen       : access xcb_screen_t;
         cookie       : xcb_void_cookie_t;
+
         screenIter   : aliased xcb_screen_iterator_t;
+        depthIter    : aliased xcb_depth_iterator_t;
+        visIter      : aliased xcb_visualtype_iterator_t;
+        -- visualID     : xcb_visualid_t;
+        -- visual       : xcb_visualtype_t;
 
         rootAttributes : aliased xcb_change_window_attributes_value_list_t;
         numScreens   : Natural := 0;
@@ -313,13 +329,11 @@ package body Setup is
         
         if connection = null then
             ignore := Xlib.XCloseDisplay(display);
-            Ada.Text_IO.Put_Line("Unable to get XCB connection from Xlib.");
-            return null;
+            raise SetupException with "Unable to get XCB connection from Xlib.";
         end if;
 
         if xcb_connection_has_error (connection) > 0 then
-            Ada.Text_IO.Put_Line ("Could not open connection to X Server");
-            return null;
+            raise SetupException with "Could not open connection to X Server";
         end if;
 
         Ada.Text_IO.Put_Line ("Troodon: Received XCB connection from Xlib");
@@ -332,7 +346,7 @@ package body Setup is
         --  there is more than one screen available.
         screenIter := xcb_setup_roots_iterator (xcb_get_setup (connection));
 
-        -- Get first screen of connection
+        -- Get screens of connection
         while screenIter.c_rem >= 0 loop
             if screenNumber = 0 then
                 numScreens := numScreens + 1;
@@ -345,14 +359,56 @@ package body Setup is
             xcb_screen_next (screenIter'Access);
         end loop;
 
-        Ada.Text_IO.Put_Line ("");
-        Ada.Text_IO.Put_Line ("Found" & numScreens'Image & " screen(s)");
-        Ada.Text_IO.Put_Line ("Information about screen" & screenNumber'Image);
-        Ada.Text_IO.Put_Line (" width...........:" & screen.width_in_pixels'Image);
-        Ada.Text_IO.Put_Line (" height..........:" & screen.height_in_pixels'Image);
-        Ada.Text_IO.Put_Line (" white pixel.....:" & screen.white_pixel'Image);
-        Ada.Text_IO.Put_Line (" black pixel.....:" & screen.black_pixel'Image);
-        Ada.Text_IO.Put_Line (" Root Window.....:" & screen.root'Image);
+        if screen /= null then
+            Ada.Text_IO.Put_Line ("");
+            Ada.Text_IO.Put_Line ("Found" & numScreens'Image & " screen(s)");
+            Ada.Text_IO.Put_Line ("Information about screen" & screenNumber'Image);
+            Ada.Text_IO.Put_Line (" width...........:" & screen.width_in_pixels'Image);
+            Ada.Text_IO.Put_Line (" height..........:" & screen.height_in_pixels'Image);
+            Ada.Text_IO.Put_Line (" white pixel.....:" & screen.white_pixel'Image);
+            Ada.Text_IO.Put_Line (" black pixel.....:" & screen.black_pixel'Image);
+            Ada.Text_IO.Put_Line (" Root window ID..:" & screen.root'Image);
+            Ada.Text_IO.Put_Line (" Root pixel depth:" & screen.root_depth'Image);
+            Ada.Text_IO.Put_Line (" Visual ID.......:" & screen.root_visual'Image);
+
+            -- Get info about visuals
+            -- This block of code is roughly analogous to XMatchVisualInfo
+            -- depthIter := xcb_screen_allowed_depths_iterator (screen);
+            -- Ada.Text_IO.Put_Line (" Found" & xcb_screen_allowed_depths_length (screen)'Image & " depths for this screen");
+
+            -- loop
+
+            --     visIter := xcb_depth_visuals_iterator (depthIter.data);
+            --     Ada.Text_IO.Put_Line (" Depth:" & depthIter.data.depth'Image);
+            --     Ada.Text_IO.Put_Line ("  Found" & xcb_depth_visuals_length (depthIter.data)'Image & " visuals for this depth");
+                
+            --     loop
+
+            --         -- Ada.Text_IO.Put_Line ("  Visual ID:        " & visIter.data.visual_id'Image);
+            --         -- Ada.Text_IO.Put_Line ("   Bits per rgb:    " & visIter.data.bits_per_rgb_value'Image);
+            --         -- Ada.Text_IO.Put_Line ("   Colormap Entries:" & visIter.data.colormap_entries'Image);
+                    
+            --         -- If we find a visual that matches our needs, keep it for later and move on
+            --         if depthIter.data.depth = 24 and visIter.data.bits_per_rgb_value = 8 then
+            --             visual24 := visIter.data.visual_id;
+            --             Ada.Text_IO.Put_Line ("  using visual ID" & visual24'Image & " for 24-bit depth");
+            --             exit;
+            --         elsif depthIter.data.depth = 32 and visIter.data.bits_per_rgb_value = 8 then
+            --             visual32 := visIter.data.visual_id;
+            --             Ada.Text_IO.Put_Line ("  using visual ID" & visual32'Image & " for 32-bit depth");
+            --             exit;
+            --         end if;
+                    
+            --         exit when visIter.c_rem = 0;
+            --         xcb_visualtype_next (visIter'Access);
+            --     end loop;
+
+            --    exit when depthIter.c_rem = 0;
+            --    xcb_depth_next (depthIter'Access);
+            -- end loop;
+        else
+            raise SetupException with "No screens found.";
+        end if;
 
         -- Make sure another window manager isn't running, and register for events
         -- which defines Troodon as _the_ window manager.

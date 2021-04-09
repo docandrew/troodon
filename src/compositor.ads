@@ -15,6 +15,10 @@ with Render;
 -------------------------------------------------------------------------------
 package Compositor is
     
+    -- In automatic mode, the X server performs compositing like normal. In
+    -- manual mode, we do the compositing ourselves using OpenGL
+    type CompositeMode is (AUTOMATIC, MANUAL);
+
     CompositorException : exception;
     
     overlayWindow   : xproto.xcb_window_t;
@@ -43,7 +47,8 @@ package Compositor is
     -- Initialize the compositor
     ---------------------------------------------------------------------------
     procedure initCompositor (c    : access xcb.xcb_connection_t;
-                              rend : Render.Renderer);
+                              rend : Render.Renderer;
+                              mode : CompositeMode);
 
     ---------------------------------------------------------------------------
     -- blitWindow

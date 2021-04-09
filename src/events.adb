@@ -33,9 +33,10 @@ package body events is
     winStartY       : Interfaces.C.short;   
     dragStartX      : Interfaces.C.short;   
     dragStartY      : Interfaces.C.short;   
-    dragFrame       : xcb_window_t;         
-    mouseX          : Interfaces.C.short;
-    mouseY          : Interfaces.C.short;
+    dragFrame       : xcb_window_t;
+    dragInProgress  : Boolean := False;
+    -- mouseX          : Interfaces.C.short;
+    -- mouseY          : Interfaces.C.short;
     
     ---------------------------------------------------------------------------
     -- handleMapRequest
@@ -49,35 +50,25 @@ package body events is
         type mapRequestPtr is access all xcb_map_request_event_t;
         mapRequestEvent : mapRequestPtr;
 
-        dummyCookie : xcb_void_cookie_t;
-        dummy       : int;
+        cookie : xcb_void_cookie_t;
+        -- dummy  : int;
 
-        -- mouseCookie : xcb_void_cookie_t;
-
-        -- frame   : xcb_window_t;  -- parent window
-        -- window  : xcb_window_t;  -- app window
         winType : xcb_atom_t := XCB_ATOM_NONE;    -- type of window, if set.
-        title   : Unbounded_String := To_Unbounded_String ("");
-        screen  : access xcb_screen_t;
-        frameThis : Boolean := True;
+        -- title   : Unbounded_String := To_Unbounded_String ("");
+        -- screen  : access xcb_screen_t;
+        -- frameThis : Boolean := True;
 
-        drawable : GLX.GLXDrawable := 0;
+        -- drawable : GLX.GLXDrawable := 0;
 
-        -- type geomPtr is access all xcb_get_geometry_reply_t;
-        -- geom : geomPtr;
-        geom : xcb_get_geometry_reply_t;
+        -- geom : xcb_get_geometry_reply_t;
 
-        frameValueMask : Interfaces.C.unsigned :=
-            (if rend.kind = render.SOFTWARE then 
-                XCB_CW_BORDER_PIXEL or XCB_CW_BACK_PIXEL or XCB_CW_EVENT_MASK
-             else
-                XCB_CW_BORDER_PIXEL or XCB_CW_BACK_PIXEL or XCB_CW_EVENT_MASK or XCB_CW_COLORMAP);
+        -- frameValueMask : Interfaces.C.unsigned :=
+        --     (if rend.kind = render.SOFTWARE then 
+        --         XCB_CW_BORDER_PIXEL or XCB_CW_BACK_PIXEL or XCB_CW_EVENT_MASK
+        --      else
+        --         XCB_CW_BORDER_PIXEL or XCB_CW_BACK_PIXEL or XCB_CW_EVENT_MASK or XCB_CW_COLORMAP);
 
-        frameCreateAttributes : aliased xcb_create_window_value_list_t :=
-            (if rend.kind = render.SOFTWARE then
-                (others => <>)
-             else
-                (colormap => rend.colormap, others => <>));
+        -- frameCreateAttributes : aliased xcb_create_window_value_list_t; -- := (others => <>);
 
         function toMapEvent is new Ada.Unchecked_Conversion (Source => eventPtr, Target => mapRequestPtr);
     begin
@@ -107,14 +98,15 @@ package body events is
         if setup.ewmh /= null then
             winType := getAtomProperty (connection, mapRequestEvent.window, setup.ewmh.u_NET_WM_WINDOW_TYPE);
 
-            -- if a dock, then map this as-is.
-            -- @TODO keep this top-level?
-            -- @TODO grab inputs?
-            -- @TODO check for other types of unframed windows (certain dialogs, etc.)
-            if winType = setup.ewmh.u_NET_WM_WINDOW_TYPE_DOCK then
-                frameThis := False;
+            if winType = setup.ewmh.u_NET_WM_WINDOW_TYPE_DOCK or
+               winType = Setup.ewmh.u_NET_WM_WINDOW_TYPE_DESKTOP then
+
+                -- frameThis := False;
                 Ada.Text_IO.Put_Line("Troodon: mapping docked window");
-                dummyCookie := xcb_map_window (c => connection, window => mapRequestEvent.window);
+                
+                Compositor.addWindow (mapRequestEvent.window);
+
+                cookie := xcb_map_window (c => connection, window => mapRequestEvent.window);
                 return;
             end if;
         end if;
@@ -124,6 +116,10 @@ package body events is
         declare
             F : Frame := frameWindow(connection, mapRequestEvent.window, rend);
         begin
+            -- Only need to composite the parent window.
+            Compositor.addWindow (F.frameID);
+            -- Compositor.addWindow (F.appWindow);
+
             F.map;
         end;
 
@@ -202,9 +198,10 @@ package body events is
 
             -- Clicked on a frame. Register the start pos in case this turns into a drag.
             --@TODO see if this was on the resize area.
-            dragFrame  := buttonEvent.event;
-            dragStartX := buttonEvent.root_x;
-            dragStartY := buttonEvent.root_y;
+            dragInProgress := False;                -- Drag not in progress yet.
+            dragFrame      := buttonEvent.event;
+            dragStartX     := buttonEvent.root_x;
+            dragStartY     := buttonEvent.root_y;
             
             -- Need to get geometry of window to determine its current pos
             geom := Util.getWindowGeometry (connection, buttonEvent.event);
@@ -250,6 +247,8 @@ package body events is
 
         -- If we were dragging, stop.
         dragFrame := 0;
+        dragInProgress := False;
+        Frames.stopDrag;
 
         ignore := xcb_flush (connection);
     end handleButtonRelease;
@@ -280,6 +279,12 @@ package body events is
         -- Ada.Text_IO.Put_Line ("Root X: " & motionEvent.root_x'Image & " Root Y: " & motionEvent.root_y'Image);
         
         if dragFrame /= 0 then
+            -- Only want to start the drag once.
+            if not dragInProgress then
+                dragInProgress := True;
+                Frames.startDrag (dragFrame);
+            end if;
+
             -- Update window location
             deltaX := dragStartX - winStartX;
             deltaY := dragStartY - winStartY;
@@ -322,34 +327,14 @@ package body events is
             -- exposing a frame
             getFrameFromList (exposeEvent.window).draw;
 
-            -- Compositor.blitWindow (c    => connection,
-            --                        win  => getFrameFromList (exposeEvent.window).frameID,
-            --                        rend => rend);
-
-            -- Compositor.blitWindow (c    => connection,
-            --                        win  => getFrameFromList (exposeEvent.window).appWindow,
-            --                        rend => rend);
-
         elsif hasFrame (exposeEvent.window) then
             -- exposing a framed application window.
             getFrameOfWindow (exposeEvent.window).draw;
-
-            -- blit the frame
-            -- Compositor.blitWindow (c    => connection, 
-            --                        win  => getFrameOfWindow(exposeEvent.window).frameID,
-            --                        rend => rend);
-
-            -- Compositor.blitWindow (c    => connection, 
-            --                        win  => getFrameOfWindow(exposeEvent.window).appWindow,
-            --                        rend => rend);                                   
 
         else
             -- exposing a non-framed window, just let it expose.
             -- @TODO if we determine this is a DE menu or something like that
             --  then we'll want to draw it here too.
-            -- Compositor.blitWindow (c    => connection,
-            --                        win  => exposeEvent.window,
-            --                        rend => rend);
             null;
         end if;
 
@@ -362,6 +347,9 @@ package body events is
     procedure handleCreate (connection : access xcb_connection_t;
                             event      : eventPtr;
                             rend       : Render.Renderer) is
+
+        use Frames;
+
         type CreateEventPtr is access all xcb_create_notify_event_t;
 
         function toCreateEvent is new Ada.Unchecked_Conversion (Source => eventPtr, Target => CreateEventPtr);
@@ -371,11 +359,16 @@ package body events is
     begin
         Ada.Text_IO.Put_Line ("Window Create: " & createEvent.window'Image & " with parent " & createEvent.parent'Image);
     
+        -- We might get this notification after a window has already been mapped/focused.
+        -- We will only add non-framed windows to the render stack here.
+
         -- Add to the list, but ignore the overlay window since we get a
         -- create notification for that too.
-        if win /= Compositor.overlayWindow then
-            Compositor.addWindow (win);
-        end if;
+        -- if win /= Compositor.overlayWindow then
+        --     if not isFrame (win) and not hasFrame (win) then
+        --         Compositor.addWindow (win);
+        --     end if;
+        -- end if;
     end handleCreate;
 
     ---------------------------------------------------------------------------
@@ -390,73 +383,99 @@ package body events is
     begin
         Ada.Text_IO.Put_Line ("Window Destroy: " & destroyEvent.window'Image);
 
-        Compositor.deleteWindow (destroyEvent.window);
+        -- Compositor.deleteWindow (destroyEvent.window);
     end handleDestroy;
+
+    ---------------------------------------------------------------------------
+    -- dispatchEvent
+    ---------------------------------------------------------------------------
+    procedure dispatchEvent (connection : access xcb_connection_t;
+                             rend       : Render.Renderer;
+                             event      : Events.eventPtr) is
+
+        XCB_EVENT_MASK : constant := 2#0111_1111#;
+
+    begin
+        case (event.response_type and XCB_EVENT_MASK) is
+            when CONST_XCB_MAP_REQUEST =>
+                events.handleMapRequest (connection, event, rend);
+                
+            when CONST_XCB_CONFIGURE_REQUEST =>
+                events.handleConfigureRequest (connection, event);
+
+            when CONST_XCB_BUTTON_PRESS =>
+                events.handleButtonPress (connection, event);
+        
+            when CONST_XCB_MOTION_NOTIFY =>
+                events.handleMotionNotify (connection, event);
+
+            when CONST_XCB_BUTTON_RELEASE =>
+                events.handleButtonRelease (connection, event);
+
+            when CONST_XCB_EXPOSE =>
+                events.handleExpose (connection, event, rend);
+
+            when CONST_XCB_CREATE_NOTIFY =>
+                events.handleCreate (connection, event, rend);
+
+            when CONST_XCB_DESTROY_NOTIFY =>
+                events.handleDestroy (connection, event);
+
+            when CONST_XCB_KEY_PRESS =>
+                Ada.Text_IO.Put_Line("Key Pressed");
+                    
+            when others =>
+                null;
+        end case;
+    end dispatchEvent;
 
     ---------------------------------------------------------------------------
     -- eventLoop
     ---------------------------------------------------------------------------
     procedure eventLoop (connection : access xcb_connection_t; 
-                         rend       : Render.Renderer)
+                         rend       : Render.Renderer;
+                         mode       : Compositor.CompositeMode)
     is
+        use Compositor;
         procedure free is new Ada.Unchecked_Deallocation (Object => xcb_generic_event_t, Name => events.eventPtr);
 
-        XCB_EVENT_MASK : constant := 2#0111_1111#;
 
         event          : Events.eventPtr;
         ignore         : int;
-
     begin
-        
-        ignore := xcb_flush(connection);
 
-        --focusWin := setup.getRootWindow(connection);
-        --Ada.Text_IO.Put_Line("Focused Window:" & focusedWindow'Image);
-        
+        ignore := xcb_flush (connection);
+
         loop
             --Ada.Text_IO.Put_Line("Start Event Loop");
-            event := events.eventPtr (xcb_wait_for_event (connection));
-    
-            exit when event = null;
-            --Ada.Text_IO.Put_Line("Received Event " & event.response_type'Image);
-    
-            case (event.response_type and XCB_EVENT_MASK) is
-                when CONST_XCB_MAP_REQUEST =>
-                    events.handleMapRequest (connection, event, rend);
-                    
-                when CONST_XCB_CONFIGURE_REQUEST =>
-                    events.handleConfigureRequest (connection, event);
-    
-                when CONST_XCB_BUTTON_PRESS =>
-                    events.handleButtonPress (connection, event);
-            
-                when CONST_XCB_MOTION_NOTIFY =>
-                    events.handleMotionNotify (connection, event);
-    
-                when CONST_XCB_BUTTON_RELEASE =>
-                    events.handleButtonRelease (connection, event);
-    
-                when CONST_XCB_EXPOSE =>
-                    events.handleExpose (connection, event, rend);
+            -- event := events.eventPtr (xcb_wait_for_event (connection));
+            -- exit when event = null;
 
-                when CONST_XCB_CREATE_NOTIFY =>
-                    events.handleCreate (connection, event, rend);
+            if mode = Compositor.MANUAL then
+                -- If we're compositing ourselves, we need to refresh the
+                -- screen even if no events are headed our way so we poll
+                -- here to avoid blocking.
+                event := Events.eventPtr (xcb_poll_for_event (connection));
 
-                when CONST_XCB_DESTROY_NOTIFY =>
-                    events.handleDestroy (connection, event);
+                if event /= null then
+                    dispatchEvent (connection, rend, event);
+                    Compositor.blitAll (connection, rend);
+                    delay Duration(0.02);
+                else
+                    -- Need to perform compositing here ourselves
+                    Compositor.blitAll (connection, rend);
+                end if;
 
-                when CONST_XCB_KEY_PRESS =>
-                    Ada.Text_IO.Put_Line("Key Pressed");
-                        
-                when others =>
-                    null;
-            end case;
+                free (event);
+            else
+                -- In automatic compositing mode, we can afford to block
+                event := Events.eventPtr (xcb_wait_for_event (connection));
+                exit when event = null;
 
-            -- Re-render everything.
-            Compositor.blitAll (connection, rend);
-    
-            free (event);
-            --Ada.Text_IO.Put_Line("End Event Loop");
+                dispatchEvent (connection, rend, event);
+
+                free (event);
+            end if;
         end loop;
         
     end eventLoop;
