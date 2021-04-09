@@ -439,19 +439,14 @@ package body events is
         use Compositor;
         procedure free is new Ada.Unchecked_Deallocation (Object => xcb_generic_event_t, Name => events.eventPtr);
 
-
         event          : Events.eventPtr;
         ignore         : int;
     begin
 
         ignore := xcb_flush (connection);
 
-        loop
-            --Ada.Text_IO.Put_Line("Start Event Loop");
-            -- event := events.eventPtr (xcb_wait_for_event (connection));
-            -- exit when event = null;
-
-            if mode = Compositor.MANUAL then
+        if mode = Compositor.MANUAL then
+            loop
                 -- If we're compositing ourselves, we need to refresh the
                 -- screen even if no events are headed our way so we poll
                 -- here to avoid blocking.
@@ -459,24 +454,26 @@ package body events is
 
                 if event /= null then
                     dispatchEvent (connection, rend, event);
-                    Compositor.blitAll (connection, rend);
-                    delay Duration(0.02);
+                    ignore := xcb_flush (connection);
+                    free (event);
                 else
-                    -- Need to perform compositing here ourselves
+                    -- Ada.Text_IO.Put_Line ("blitall");
                     Compositor.blitAll (connection, rend);
+                    delay 0.0166;
                 end if;
 
-                free (event);
-            else
-                -- In automatic compositing mode, we can afford to block
+            end loop;
+        else
+            loop
+                -- In automatic compositing mode, we block
                 event := Events.eventPtr (xcb_wait_for_event (connection));
                 exit when event = null;
 
                 dispatchEvent (connection, rend, event);
 
                 free (event);
-            end if;
-        end loop;
+            end loop;
+        end if;
         
     end eventLoop;
 end events;

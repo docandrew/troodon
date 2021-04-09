@@ -85,16 +85,18 @@ package body render is
             bitsB  : aliased int;
             bitsA  : aliased int;
             vid    : aliased int;
+            trans  : aliased int;
         begin
-            glxRet := GLX.glXGetFBConfigAttrib (display, fb, GLX.GLX_VISUAL_ID,     vid'Access);
-            glxRet := GLX.glXGetFBConfigAttrib (display, fb, GLX.GLX_X_VISUAL_TYPE, vtype'Access);
-            glxRet := GLX.glXGetFBConfigAttrib (display, fb, GLX.GLX_DEPTH_SIZE,    depth'Access);
-            glxRet := GLX.glXGetFBConfigAttrib (display, fb, GLX.GLX_BUFFER_SIZE,   size'Access);
-            glxRet := GLX.glXGetFBConfigAttrib (display, fb, GLX.GLX_DOUBLEBUFFER,  dbuf'Access);
-            glxRet := GLX.glXGetFBConfigAttrib (display, fb, GLX.GLX_RED_SIZE,      bitsR'Access);
-            glxRet := GLX.glXGetFBConfigAttrib (display, fb, GLX.GLX_GREEN_SIZE,    bitsG'Access);
-            glxRet := GLX.glXGetFBConfigAttrib (display, fb, GLX.GLX_BLUE_SIZE,     bitsB'Access);
-            glxRet := GLX.glXGetFBConfigAttrib (display, fb, GLX.GLX_ALPHA_SIZE,    bitsA'Access);
+            glxRet := GLX.glXGetFBConfigAttrib (display, fb, GLX.GLX_VISUAL_ID,         vid'Access);
+            glxRet := GLX.glXGetFBConfigAttrib (display, fb, GLX.GLX_X_VISUAL_TYPE,     vtype'Access);
+            glxRet := GLX.glXGetFBConfigAttrib (display, fb, GLX.GLX_DEPTH_SIZE,        depth'Access);
+            glxRet := GLX.glXGetFBConfigAttrib (display, fb, GLX.GLX_BUFFER_SIZE,       size'Access);
+            glxRet := GLX.glXGetFBConfigAttrib (display, fb, GLX.GLX_DOUBLEBUFFER,      dbuf'Access);
+            glxRet := GLX.glXGetFBConfigAttrib (display, fb, GLX.GLX_RED_SIZE,          bitsR'Access);
+            glxRet := GLX.glXGetFBConfigAttrib (display, fb, GLX.GLX_GREEN_SIZE,        bitsG'Access);
+            glxRet := GLX.glXGetFBConfigAttrib (display, fb, GLX.GLX_BLUE_SIZE,         bitsB'Access);
+            glxRet := GLX.glXGetFBConfigAttrib (display, fb, GLX.GLX_ALPHA_SIZE,        bitsA'Access);
+            glxRet := GLX.glXGetFBConfigAttrib (display, fb, GLX.GLX_TRANSPARENT_TYPE,  trans'Access);
             
             Ada.Text_IO.Put_Line ("Troodon: (Render) GLX Framebuffer Configuration:");
             Ada.Text_IO.Put_Line (" Visual ID.......:" & vid'Image);
@@ -106,6 +108,11 @@ package body render is
             Ada.Text_IO.Put_Line (" Green Bits......:" & bitsG'Image);
             Ada.Text_IO.Put_Line (" Blue Bits.......:" & bitsB'Image);
             Ada.Text_IO.Put_Line (" Alpha Bits......:" & bitsA'Image);
+            Ada.Text_IO.Put_Line (" Transparency....: " & 
+                (if    trans = GLX.GLX_NONE then "None" 
+                 elsif trans = GLX.GLX_TRANSPARENT_INDEX then "Index" 
+                 elsif trans = GLX.GLX_TRANSPARENT_RGB then "RGB"
+                 else "Unknown"));
     end printFBConfig;
 
     ---------------------------------------------------------------------------
@@ -122,11 +129,11 @@ package body render is
         fbConfigsAddr : System.Address;
         fbConfigCount : aliased int;
 
-        visualAttribs : GLX.IntArray(1..19) := (
-            -- GLX_X_RENDERABLE,   1,
+        visualAttribs : GLX.IntArray(1..23) := (
+            GLX_X_RENDERABLE,   1,
             GLX_DRAWABLE_TYPE,  GLX_WINDOW_BIT,
             GLX_RENDER_TYPE,    GLX_RGBA_BIT,
-            -- GLX_X_VISUAL_TYPE,  GLX_TRUE_COLOR,
+            GLX_X_VISUAL_TYPE,  GLX_TRUE_COLOR,
             GLX_RED_SIZE,       8,
             GLX_GREEN_SIZE,     8,
             GLX_BLUE_SIZE,      8,
@@ -140,9 +147,9 @@ package body render is
     begin
         -- Find a list of suitable framebuffer configurations
         fbConfigsAddr := GLX.glXChooseFBConfig (dpy       => display,
-                                               screen     => Xlib.XDefaultScreen(display),
-                                               attribList => visualAttribs,
-                                               nitems     => fbConfigCount'Access);
+                                                screen     => Xlib.XDefaultScreen(display),
+                                                attribList => visualAttribs,
+                                                nitems     => fbConfigCount'Access);
 
         if fbConfigsAddr = System.Null_Address or fbConfigCount = 0 then
             raise OpenGLException with "Troodon: (Render) Unable to get GLX framebuffer config";
@@ -184,8 +191,14 @@ package body render is
             for fb of fbConfigs loop
                 visual := GLX.glXGetVisualFromFBConfig (display, fb);
 
-                -- For some reason 
-                if visual /= null and then visual.depth = 32 then
+                -- If we use a different visual, glXSwapBuffers fails
+                -- EXPERIMENT
+                -- visualID := xproto.xcb_visualid_t(visual.the_visualid);
+                -- fbConfig := fb;
+                -- return;
+                -- END EXPERIMENT
+
+                if visual /= null then
                     screens := xcb_render_query_pict_formats_screens_iterator (formats);
 
                     while screens.c_rem >= 0 loop
@@ -199,9 +212,11 @@ package body render is
                                     doofers := xcb_render_query_pict_formats_formats_iterator (formats);
 
                                     while doofers.c_rem >= 0 loop
-                                        if doofers.data.direct.alpha_mask > 0 then
+                                        if doofers.data.id = visuals.data.format and 
+                                           doofers.data.direct.alpha_mask > 0 then
                                             -- we found it!
-                                            Ada.Text_IO.Put_Line ("Troodon: (Render) WE FOUND IT!");
+                                            Ada.Text_IO.Put_Line ("Troodon: (Render) Found picture format" & 
+                                                doofers.data.id'Image & " matching visual ID" & visuals.data.visual'Image);
                                             
                                             visualID := xproto.xcb_visualid_t(visual.the_visualid);
                                             fbConfig := fb;
@@ -250,22 +265,13 @@ package body render is
 
     begin
 
+        
         getFBConfig (connection, display, fb, visualID);
         printFBConfig (display, fb);
-
-        -- glxRet := GLX.glXGetFBConfigAttrib (dpy       => display,
-        --                                     config    => fbConfig,
-        --                                     attribute => GLX.GLX_VISUAL_ID,
-        --                                     value     => visualID'Access);
-
         
         Ada.Text_IO.Put_Line ("Troodon: (Render) Using Visual ID" & visualID'Image);
-
-        -- if glxRet = GLX.GLX_NO_EXTENSION or glxRet = GLX_BAD_ATTRIBUTE then
-        --     raise OpenGLException with "Troodon: (Render) queried GLX for Visual ID, but does not exist.";
-        -- end if;
-
         Ada.Text_IO.Put_Line ("Troodon: (Render) Creating GLX Context");
+
         glxContext := GLX.glXCreateNewContext (dpy         => display,
                                                config      => fb,
                                                renderType  => GLX.GLX_RGBA_TYPE,

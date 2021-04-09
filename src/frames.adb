@@ -110,7 +110,7 @@ package body Frames is
 
         glErr : GL.GLenum;
 
-        dragAlpha : Float := (if f.dragging then 0.5 else 1.0);
+        dragAlpha : Float := 0.5; --(if f.dragging then 0.5 else 1.0);
     begin
         -- Ada.Text_IO.Put_Line("Enter drawTitleBar");
 
@@ -145,6 +145,12 @@ package body Frames is
             --     Render.Shaders.initShaders;
             -- end if;
 
+            -- Enable blending
+            GL.glEnable (cap => GL.GL_BLEND);
+
+            GL.glBlendFunc (sfactor => GL.GL_SRC_ALPHA,
+                            dfactor => GL.GL_ONE_MINUS_SRC_ALPHA);
+
             if f.focused then
                 --Ada.Text_IO.Put_Line ("Drawing focused window");
                 GL.glClearColor (red   => FRAME_BG_GL_FOCUSED.r,
@@ -163,16 +169,7 @@ package body Frames is
 
             -- glErr := GL.glGetError;
             -- Ada.Text_IO.Put_Line ("glClear GL error? " & glErr'Image);
-
-            -- Enable blending
-            GL.glEnable (cap => GL.GL_BLEND);
-
-            GL.glBlendFunc (sfactor => GL.GL_SRC_ALPHA,
-                            dfactor => GL.GL_ONE_MINUS_SRC_ALPHA);
             
-            -- glErr := GL.glGetError;
-            -- Ada.Text_IO.Put_Line ("glBlendFunc error? " & glErr'Image);
-
             winW := Float(f.width);
             winH := Float(f.height);
 
@@ -338,14 +335,13 @@ package body Frames is
         f.frameID := xcb_generate_id (connection);
 
         -- Create new colormap
-        -- colormap := xcb_generate_id (connection);
+        colormap := xcb_generate_id (connection);
 
-        -- cookie := xcb_create_colormap_checked (c      => connection, 
-        --                                        alloc  => xcb_colormap_alloc_t'Pos(XCB_COLORMAP_ALLOC_NONE),
-        --                                        mid    => colormap,
-        --                                        window => screen.root,
-        --                                        visual => Setup.visual32);
-                                               --visual => rend.visualID);
+        cookie := xcb_create_colormap_checked (c      => connection, 
+                                               alloc  => xcb_colormap_alloc_t'Pos(XCB_COLORMAP_ALLOC_NONE),
+                                               mid    => colormap,
+                                               window => screen.root,
+                                               visual => rend.visualID);
         
         error := xcb_request_check (connection, cookie);
 
@@ -400,14 +396,14 @@ package body Frames is
            xcb_create_window_aux_checked (c            => connection,
                                           depth        => 32,
                                           wid          => f.frameID,
-                                          parent       => screen.root,
+                                          parent       => screen.root, --Compositor.sceneWindow,   -- in automatic mode, should be screen.root
                                           x            => geom.x,
                                           y            => geom.y,
                                           width        => unsigned_short(f.width),
                                           height       => unsigned_short(f.height),
-                                          border_width => 0,   -- @TODO for development. We'll draw our own frames later.
+                                          border_width => 0,
                                           u_class      => xcb_window_class_t'Pos (XCB_WINDOW_CLASS_INPUT_OUTPUT), 
-                                          visual       => rend.visualID, -- 
+                                          visual       => rend.visualID,
                                           value_mask   => frameValueMask,
                                           value_list   => frameCreateAttributes'Access);
 

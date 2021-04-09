@@ -1,4 +1,7 @@
 project Troodon is
+   type BuildOption is ("release", "debug");
+   BuildType : BuildOption := external ("build", "debug");
+
    HOME := external ("HOME");
    -- SDLADALIB := HOME & "/opt/sdlada/lib/sdlada.release";
    -- SDLADASRC := HOME & "/opt/sdlada/include/sdlada.release";
@@ -17,23 +20,45 @@ project Troodon is
    end Naming;
    
    package Linker is
-      for Switches ("ada") use
-      (
-            "-lxcb",
-            "-lxcb-ewmh",
-            "-lxcb-composite", 
-            "-lxcb-glx",
-            "-lxcb-xfixes", 
-            "-lxcb-randr",
-            "-lxcb-render",
-            "-lxcb-shape",
-            "-lxcb-xinerama",
-            "-lX11-xcb", 
-            "-lX11", 
-            "-lGL",
-            "-lGLX", 
-            "-lfreetype"
-      );
+      case BuildType is
+         when "debug" =>
+            for Switches ("ada") use (
+               "-lxcb",
+               "-lxcb-ewmh",
+               "-lxcb-composite", 
+               "-lxcb-glx",
+               "-lxcb-xfixes", 
+               "-lxcb-randr",
+               "-lxcb-render",
+               "-lxcb-shape",
+               "-lxcb-xinerama",
+               "-lX11-xcb", 
+               "-lX11", 
+               "-lGL",
+               "-lGLX", 
+               "-lfreetype",
+               "-pg"
+            );
+         when "release" =>
+            for Switches ("ada") use (
+               "-lxcb",
+               "-lxcb-ewmh",
+               "-lxcb-composite", 
+               "-lxcb-glx",
+               "-lxcb-xfixes", 
+               "-lxcb-randr",
+               "-lxcb-render",
+               "-lxcb-shape",
+               "-lxcb-xinerama",
+               "-lX11-xcb", 
+               "-lX11", 
+               "-lGL",
+               "-lGLX", 
+               "-lfreetype"
+            );
+         when others =>
+            null;
+      end case;
    end Linker;
 
    package Builder is
@@ -49,7 +74,26 @@ project Troodon is
    end Binder;
 
    package Compiler is
-      for Switches ("ada") use ("-gnat12", "-gnatf", "-gnateE", "-g", "-gnato", "-fstack-check", "-gnatE");
+      case BuildType is
+         when "debug" =>
+            for Switches ("ada") use (
+               "-gnat12",
+               "-gnatf",
+               "-gnateE",
+               "-g",
+               "-gnato",
+               "-fstack-check",
+               "-gnatE",
+               "-pg");
+         when "release" =>
+            for Switches ("ada") use (
+               "-gnat12",
+               "-O2",
+               "-mtune=native"
+            );
+         when others =>
+            null;
+      end case;
    
       for Driver ("yasm") use "yasm";
       for Object_File_Suffix ("yasm") use ".o";

@@ -92,16 +92,16 @@ package body Compositor is
     end bringToTop;
 
     ---------------------------------------------------------------------------
-    -- createGLOverlay
+    -- createGLScene
     -- Given a overlay window from the X Composite extension and the OpenGL
     -- Renderer, create a GLX window that we can composite images to.
     --
     -- @TODO some overlap here between this and Frames.createOpenGLSurface,
     --  could probably avoid some repetition.
     ---------------------------------------------------------------------------
-    procedure createGLOverlay(c          : access xcb_connection_t;
-                              rend       : Render.Renderer;
-                              overlayWin : xproto.xcb_window_t) is
+    procedure createGLScene (c          : access xcb_connection_t;
+                             rend       : Render.Renderer;
+                             sceneWin   : xproto.xcb_window_t) is
         glxWindow : GLX.GLXWindow;
         drawable  : GLX.GLXDrawable;
         glxRet    : int;
@@ -109,7 +109,7 @@ package body Compositor is
 
         glxWindow := GLX.glXCreateWindow (dpy        => rend.display,
                                           config     => rend.fbConfig,
-                                          win        => Interfaces.C.unsigned_long(overlayWin),
+                                          win        => Interfaces.C.unsigned_long(sceneWin),
                                           attribList => null);
 
         if glxWindow = 0 then
@@ -127,9 +127,9 @@ package body Compositor is
             raise CompositorException with "Troodon: (compositor) Failed to make GLX context current.";
         end if;
 
-        Compositor.overlayWindow   := overlayWin;
-        Compositor.overlayDrawable := drawable;
-    end createGLOverlay;
+        -- Compositor.sceneDrawable := drawable;
+        -- Compositor.sceneWindow   := sceneWin;
+    end createGLScene;
 
     ---------------------------------------------------------------------------
     -- allowInputPassthrough
@@ -155,42 +155,15 @@ package body Compositor is
         regionInput : xcb_shape_kind_t := xcb_shape_kind_t(xcb_shape_sk_t'Pos(XCB_SHAPE_SK_INPUT));
         cookie      : xcb_void_cookie_t;
         error       : access xcb_generic_error_t;
-
-        -- cookieVersion : xcb_xfixes_query_version_cookie_t;
-        -- replyVersion  : access xcb_xfixes_query_version_reply_t;
-        -- errorVers   : access xcb_generic_error_t;
     begin
-        -- Need to explicitly query the XFixes version here, otherwise the create_region call fails.
-        -- cookieVersion := xcb_xfixes_query_version (c                    => c,
-        --                                            client_major_version => 5,
-        --                                            client_minor_version => 0);
-
-        -- replyVersion := xcb_xfixes_query_version_reply (c      => c,
-        --                                                 cookie => cookieVersion,
-        --                                                 e      => error'Address);
-
-        -- if error /= null then
-        --     raise CompositorException with "Error getting XFixes version, " & error.error_code'Image
-        --             & " response type:" & error.response_type'Image
-        --             & " major:"         & error.major_code'Image 
-        --             & " minor:"         & error.minor_code'Image
-        --             & " resource:"      & error.resource_id'Image
-        --             & " sequence:"      & error.sequence'Image;
-        -- end if;
-
-        --Ada.Text_IO.Put_Line ("XFixes version info:" & replyVers.major_version'Image & "." & replyVers.minor_version'Image);
 
         -- Create the region
         region := xcb_xfixes_region_t(xcb_generate_id (c));
-
-        -- Ada.Text_IO.Put_Line ("Troodon: (compositor) Created new region ID:" & region'Image);
 
         cookie := xcb_xfixes_create_region_checked (c              => c,
                                                     region         => region,
                                                     rectangles_len => 0,
                                                     rectangles     => null);
-
-        -- Ada.Text_IO.Put_Line ("Troodon: (compositor) Create Region sequence#" & cookie.sequence'Image);
 
         error := xcb_request_check (c, cookie);
 
@@ -253,6 +226,11 @@ package body Compositor is
         
         cookieOvly : xcb_composite_get_overlay_window_cookie_t;
         replyOvly  : OverlayReplyPtr;
+        geomOvly   : xcb_get_geometry_reply_t;
+
+        sceneWin   : xcb_window_t;
+        sceneAttr  : aliased xcb_create_window_value_list_t;
+        sceneMask  : Interfaces.C.unsigned;
 
         -- Procedure name in C format for glxGetProcAddress
         procName1   : Interfaces.C.char_array := Interfaces.C.To_C ("glXBindTexImageEXT");
@@ -279,7 +257,7 @@ package body Compositor is
             Ada.Text_IO.Put_Line ("Troodon: (compositor) Using manual redirection w/ OpenGL");
             updateMode := xcb_composite_redirect_t'Pos(XCB_COMPOSITE_REDIRECT_MANUAL);
         else
-            Ada.Text_IO.Put_Line ("Troodon: (compositor) Using automatic redirection");
+            Ada.Text_IO.Put_Line ("Troodon: (Compositor) Using automatic redirection");
             updateMode := xcb_composite_redirect_t'Pos(XCB_COMPOSITE_REDIRECT_AUTOMATIC);
         end if;
 
@@ -291,7 +269,7 @@ package body Compositor is
         error := xcb_request_check (c, cookie);
 
         if error /= null then
-            Ada.Text_IO.Put_Line ("Troodon: (compositor) Error redirecting subwindows:" & error.error_code'Image);
+            Ada.Text_IO.Put_Line ("Troodon: (Compositor) Error redirecting subwindows:" & error.error_code'Image);
             raise CompositorException with "Failed to redirect subwindows";
         end if;
 
@@ -300,16 +278,69 @@ package body Compositor is
             replyOvly  := xcb_composite_get_overlay_window_reply (c, cookieOvly, error'Address);
 
             if error /= null then
-                Ada.Text_IO.Put_Line ("Troodon: (compositor) Error getting overlay window:" & error.error_code'Image);
+                Ada.Text_IO.Put_Line ("Troodon: (Compositor) Error getting overlay window:" & error.error_code'Image);
             end if;
 
-            Ada.Text_IO.Put_Line ("Troodon: (compositor) Received overlay window:" & replyOvly.overlay_win'Image);
+            Ada.Text_IO.Put_Line ("Troodon: (Compositor) Received overlay window:" & replyOvly.overlay_win'Image);
+            
+            Ada.Text_IO.Put_Line ("Troodon: (Compositor) Creating scene window");
+            geomOvly := Util.getWindowGeometry (c, replyOvly.overlay_win);
 
-            createGLOverlay (c, rend, replyOvly.overlay_win);
+            -- Experiment
+            -- Now, we create our own window with the overlay as it's parent but 32-bit color.
+            sceneWin := xcb_generate_id(c);
+
+            sceneAttr.background_pixel := 0;
+            sceneAttr.border_pixel := 0;
+            sceneAttr.colormap := rend.colormap; -- colormap
+            sceneAttr.event_mask := XCB_EVENT_MASK_EXPOSURE;
+            
+            sceneMask := XCB_CW_BACK_PIXEL or
+                         XCB_CW_BORDER_PIXEL or
+                         XCB_CW_COLORMAP or
+                         XCB_CW_EVENT_MASK;
+
+            -- Create scene window. We'll render everything to this.
+            cookie :=
+                xcb_create_window_aux_checked (c            => c,
+                                               depth        => 32,
+                                               wid          => sceneWin,
+                                               parent       => replyOvly.overlay_win,
+                                               x            => 0,
+                                               y            => 0,
+                                               width        => geomOvly.width,
+                                               height       => geomOvly.height,
+                                               border_width => 0,
+                                               u_class      => xcb_window_class_t'Pos (XCB_WINDOW_CLASS_INPUT_OUTPUT), 
+                                               visual       => rend.visualID,
+                                               value_mask   => sceneMask,
+                                               value_list   => sceneAttr'Access);
+            
+            error := xcb_request_check (c, cookie);
+
+            Ada.Text_IO.Put_Line ("Troodon: (Compositor) Created scene window:" & sceneWin'Image);
+            if error /= null then
+                raise CompositorException with "Troodon: (Compositor) Failed to create scene window, error:" & error.error_code'Image;
+            end if;
+
+            -- Ada.Text_IO.Put_Line ("Troodon: (compositor) Overlay depth: " & geomOvly.depth'Image);
+
+            createGLScene (c, rend, sceneWin);
+
+            Compositor.sceneWindow   := sceneWin;
+            Compositor.sceneDrawable := GLX.GLXDrawable(sceneWin);
+
+            cookie := xcb_map_window_checked (c, sceneWin);
+
+            error := xcb_request_check (c, cookie);
+            if error /= null then
+                raise CompositorException with "Troodon: (Compositor) Failed to map scene window, error code:" & error.error_code'Image;
+            end if;
 
             -- Set overlay as pass-through. If we're using server-side compositing we don't
             -- need to do this.
             allowInputPassthrough (c, replyOvly.overlay_win);
+            allowInputPassthrough (c, sceneWin);
             free (replyOvly);
 
             -- Attempt to get GLX_EXT_texture_from_pixmap extension.
@@ -325,7 +356,8 @@ package body Compositor is
             glXSwapIntervalEXT := toSyncProc (GLX.glXGetProcAddress (procName3(0)'Access));
 
             if glXSwapIntervalEXT /= null then
-                Ada.Text_IO.Put_Line ("Troodon: (compositor) Using glXSwapIntervalEXT extension");
+                null;
+                --Ada.Text_IO.Put_Line ("Troodon: (compositor) Using glXSwapIntervalEXT extension");
                 --@TODO this doesn't seem to play nice with Xephyr, and gives screen tearing
                 -- anyhow.
                 --glxVSync := True;
@@ -357,12 +389,6 @@ package body Compositor is
         winW       : Float;
         winH       : Float;
 
-        geomOvly   : xcb_get_geometry_reply_t;  -- geometry of the overlay window
-        ovlyW      : Float;
-        ovlyH      : Float;
-
-        orthoM     : Render.Util.Mat4;
-        
         -- Pixmap info from XCB
         cookie : xcb_void_cookie_t;
         error  : access xcb_generic_error_t;
@@ -381,8 +407,7 @@ package body Compositor is
             GLXext.GLX_TEXTURE_FORMAT_EXT, GLXext.GLX_TEXTURE_FORMAT_RGBA_EXT,
             0);
 
-        -- Default to RGB unless window is using 32-bit color depth.
-        glxPixmapAttr : access int := glxPixmapAttrRGB(0)'Access;
+        glxPixmapAttr : access int;
         
         glxPixmap : GLX.GLXPixmap;
 
@@ -400,14 +425,6 @@ package body Compositor is
         winW := Float(geomWin.width);
         winH := Float(geomWin.height);
 
-        geomOvly := Util.getWindowGeometry (c, overlayWindow);
-
-        ovlyW := Float(geomOvly.width);
-        ovlyH := Float(geomOvly.height);
-
-        -- Set up projection
-        orthoM := Render.Util.ortho (0.0, ovlyW, ovlyH, 0.0, -1.0, 1.0);
-
         -- Get pixbuf of window's off-screen storage. We have to perform this step
         -- because a window's size may have changed between blits.
         pixmap := xcb_generate_id (c);
@@ -416,7 +433,7 @@ package body Compositor is
             raise CompositorException with "Unable to generate new ID for pixmap";
         end if;
 
-        --@TODO issue here with child window when it contains different pixel sizes
+        --@TODO issue here with child window when it contains different pixel sizes?
         cookie := xcb_composite_name_window_pixmap_checked (c      => c,
                                                             window => win,
                                                             pixmap => pixmap);
@@ -432,6 +449,8 @@ package body Compositor is
         -- Determine color depth of window
         if geomWin.depth = 32 then
             glxPixmapAttr := glxPixmapAttrRGBA(0)'Access;
+        else
+            glxPixmapAttr := glxPixmapAttrRGB(0)'Access;
         end if;
 
         -- Need to bind to an intermediate GLX pixmap object first.
@@ -441,7 +460,6 @@ package body Compositor is
                                           config     => rend.fbConfig,
                                           the_pixmap => X11.Pixmap(pixmap),
                                           attribList => glxPixmapAttr);
-
 
         -- TODO: generate all the quads at once, load all textures at once, then
         -- index into the quad array for each window.
@@ -459,15 +477,6 @@ package body Compositor is
                             param  => GL.GL_LINEAR);
 
         -- Set up attribs/uniforms for shader program
-        GLext.glUniformMatrix4fv (location  => Render.Shaders.winUniformOrtho,
-                                  count     => 1,
-                                  transpose => GL.GL_TRUE,
-                                  value     => orthoM(1)'Access);
-
-        GL.glViewport (x      => 0,
-                       y      => 0,
-                       width  => GL.GLsizei(geomOvly.width),
-                       height => GL.GLsizei(geomOvly.height));
 
         GLext.glGenBuffers (1, Render.Shaders.winVBO'Access);
         GLext.glEnableVertexAttribArray (GL.GLuint(Render.Shaders.winAttribCoord));
@@ -519,26 +528,50 @@ package body Compositor is
 
         glxRet : int;
         cookie : xcb_void_cookie_t;
+
+        geomScene  : xcb_get_geometry_reply_t;  -- geometry of the overlay window
+        sceneW     : Float;
+        sceneH     : Float;
+        orthoM     : Render.Util.Mat4;
     begin
         -- To ensure all window pixmaps are in a coherent state, and not mid-copy:
-        --
         -- receive request for compositing
-        cookie := xcb_grab_server (c);
-
-        GLext.glUseProgram (Render.Shaders.winShaderProg);
+        -- cookie := xcb_grab_server (c);
 
         -- perform rendering/compositing
         glxRet := GLX.glXMakeContextCurrent (dpy  => rend.display,
-                                             draw => overlayDrawable,
-                                             read => overlayDrawable,
+                                             draw => sceneDrawable,
+                                             read => sceneDrawable,
                                              ctx  => rend.context);
+
+        GLext.glUseProgram (Render.Shaders.winShaderProg);
+
+        -- Set up projection
+        geomScene := Util.getWindowGeometry (c, sceneWindow);
+        sceneW    := Float(geomScene.width);
+        sceneH    := Float(geomScene.height);
+        orthoM    := Render.Util.ortho (0.0, sceneW, sceneH, 0.0, -1.0, 1.0);
+
+        GLext.glUniformMatrix4fv (location  => Render.Shaders.winUniformOrtho,
+                                  count     => 1,
+                                  transpose => GL.GL_TRUE,
+                                  value     => orthoM(1)'Access);
+
+        GL.glViewport (x      => 0,
+                       y      => 0,
+                       width  => GL.GLsizei(sceneW),
+                       height => GL.GLsizei(sceneH));
+
+        if glxRet = 0 then
+            Ada.Text_IO.Put_Line ("Troodon: (Compositor) blitAll - Unable to make context current");
+        end if;
 
         GLX.glXWaitX; -- Complete X work prior to GL call
 
         GL.glClearColor (red   => 0.7,
                          green => 0.7,
                          blue  => 0.0,
-                         alpha => 1.0); --FRAME_BG_GL.a);
+                         alpha => 1.0);
 
         GL.glClear (GL.GL_COLOR_BUFFER_BIT);
 
@@ -546,10 +579,10 @@ package body Compositor is
             blitWindow (c, rend, win);
         end loop;
 
-        GLX.glXSwapBuffers (rend.display, overlayDrawable);
+        GLX.glXSwapBuffers (rend.display, sceneDrawable);
         GLext.glUseProgram (0);
  
-        cookie := xcb_ungrab_server (c);
+        -- cookie := xcb_ungrab_server (c);
 
     end blitAll;
 end Compositor;

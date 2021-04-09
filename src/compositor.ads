@@ -21,8 +21,9 @@ package Compositor is
 
     CompositorException : exception;
     
-    overlayWindow   : xproto.xcb_window_t;
-    overlayDrawable : GLX.GLXDrawable;
+    -- In manual composite mode, we draw all windows to this window here.
+    sceneWindow   : xproto.xcb_window_t;
+    sceneDrawable : GLX.GLXDrawable;
 
     ---------------------------------------------------------------------------
     -- addWindow

@@ -27,7 +27,7 @@ procedure Main is
     display        : access Xlib.Display;
     connection     : access xcb.xcb_connection_t;
     rend           : Render.Renderer;
-    compMode       : Compositor.CompositeMode := Compositor.AUTOMATIC;
+    compMode       : Compositor.CompositeMode := Compositor.MANUAL;
     ignore         : int;
 begin
     -- @TODO perform a check for required libraries, and offer helpful

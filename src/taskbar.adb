@@ -112,7 +112,7 @@ package body taskbar is
         
         cookie :=
            xcb_create_window_aux(c              => connection,
-                                 depth          => 32,
+                                 depth          => XCB_COPY_FROM_PARENT,
                                  wid            => window,
                                  parent         => screen.root,
                                  x              => 0,
@@ -141,7 +141,7 @@ package body taskbar is
         end if;
 
         -- Make taskbar visible
-        cookie := xcb_map_window_checked(connection, window);
+        cookie := xcb_map_window (connection, window);
 
         ignore := xcb_flush(connection);
 

@@ -3,6 +3,7 @@ with Interfaces.C; use Interfaces.C;
 
 with xcb; use xcb;
 with xproto; use xproto;
+with GL;
 with GLX;
 
 with Render;
@@ -38,7 +39,7 @@ package body Desktop is
 
         win := xcb_generate_id (c);
 
-        Ada.Text_IO.Put_Line ("Troodon: (desktop) Creating new window with id" & win'Image);
+        Ada.Text_IO.Put_Line ("Troodon: (Desktop) Creating new window with id" & win'Image);
 
         desktopAttr.event_mask := XCB_EVENT_MASK_EXPOSURE or
                                   XCB_EVENT_MASK_BUTTON_PRESS or
