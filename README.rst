@@ -31,3 +31,7 @@ TODOs
 
 call glGetError all over the place.
 Optimize font rendering with texture atlas
+Make frame close when underlying window closes
+Usable buttons and widgets
+Add ability to make whole window transparent (i.e. when dragging, or just for eye candy)
+Add drop shadows/glow to window edges

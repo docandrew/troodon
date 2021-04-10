@@ -11956,7 +11956,7 @@ package xproto is
       left_pad : bits_stdint_uintn_h.uint8_t;
       depth : bits_stdint_uintn_h.uint8_t;
       data_len : bits_stdint_uintn_h.uint32_t;
-      data : access bits_stdint_uintn_h.uint8_t) return xcb.xcb_void_cookie_t  -- /usr/include/xcb/xproto.h:10196
+      data : access Interfaces.Unsigned_8) return xcb.xcb_void_cookie_t  -- /usr/include/xcb/xproto.h:10196
    with Import => True, 
         Convention => C, 
         External_Name => "xcb_put_image_checked";
@@ -11982,7 +11982,7 @@ package xproto is
       left_pad : bits_stdint_uintn_h.uint8_t;
       depth : bits_stdint_uintn_h.uint8_t;
       data_len : bits_stdint_uintn_h.uint32_t;
-      data : access bits_stdint_uintn_h.uint8_t) return xcb.xcb_void_cookie_t  -- /usr/include/xcb/xproto.h:10218
+      data : access Interfaces.Unsigned_8) return xcb.xcb_void_cookie_t  -- /usr/include/xcb/xproto.h:10218
    with Import => True, 
         Convention => C, 
         External_Name => "xcb_put_image";

@@ -377,10 +377,13 @@ package body Render.Shaders is
                                                         name    => Interfaces.C.To_C ("ortho"));
         winUniformTex   := GLext.glGetUniformLocation (program => winShaderProg,
                                                         name    => Interfaces.C.To_C ("tex"));
+        winUniformAlpha := GLext.glGetUniformLocation (program => winShaderProg,
+                                                        name    => Interfaces.C.To_C ("alpha"));
 
         if winAttribCoord  = -1 or
            winUniformOrtho = -1 or
-           winUniformTex   = -1 then
+           winUniformTex   = -1 or
+           winUniformAlpha = -1 then
             raise ShaderException with "Unable to get shader variables from win program.";
         end if;
 
@@ -396,6 +399,7 @@ package body Render.Shaders is
         initCircleShaders;
         initLineShaders;
         initWinShaders;
+        -- initShadowShaders;
     end initShaders;
 
     procedure teardownShaders is
@@ -404,6 +408,7 @@ package body Render.Shaders is
         GLext.glDeleteProgram (circleShaderProg);
         GLext.glDeleteProgram (lineShaderProg);
         GLext.glDeleteProgram (winShaderProg);
+        -- GLext.glDeleteProgram (shadowShaderProg);
     end teardownShaders;
 
 end Render.Shaders;

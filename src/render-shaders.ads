@@ -52,6 +52,7 @@ package Render.Shaders is
 
     winUniformOrtho     : GL.GLint;
     winUniformTex       : GL.GLint;
+    winUniformAlpha     : GL.GLint;
     winVBO              : aliased GL.GLuint;
 
     ---------------------------------------------------------------------------

@@ -55,14 +55,16 @@ package Compositor is
     -- blitWindow
     -- Take the off-screen pixbuf of a window and draw it to the overlay
     ---------------------------------------------------------------------------
-    procedure blitWindow (c    : access xcb.xcb_connection_t;
-                          rend : Render.Renderer;
-                          win  : xproto.xcb_window_t);
+    procedure blitWindow (c            : access xcb.xcb_connection_t;
+                          rend         : Render.Renderer;
+                          win          : xproto.xcb_window_t;
+                          transparency : Float := 1.0);
 
     -------------------------------------------------------------------------------
-    -- blitAll
-    -- Copy the off-screen buffers of all windows into the overlay window.
+    -- renderScene
+    -- Copy the off-screen buffers of all windows into the scene window, applying
+    -- transparency as necessary.
     -------------------------------------------------------------------------------
-    procedure blitAll (c    : access xcb.xcb_connection_t;
-                       rend : Render.Renderer);
+    procedure renderScene (c    : access xcb.xcb_connection_t;
+                           rend : Render.Renderer);
 end Compositor;

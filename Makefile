@@ -1,6 +1,6 @@
 all:
 	-rm obj/shaders.o
-	gprbuild
+	gprbuild -Xbuild=release
 
 clean:
 	-rm obj/*.o

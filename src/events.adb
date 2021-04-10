@@ -457,8 +457,8 @@ package body events is
                     ignore := xcb_flush (connection);
                     free (event);
                 else
-                    -- Ada.Text_IO.Put_Line ("blitall");
-                    Compositor.blitAll (connection, rend);
+                    Compositor.renderScene (connection, rend);
+                    -- @TODO adjust delay to keep a smooth frame rate
                     delay 0.0166;
                 end if;
 

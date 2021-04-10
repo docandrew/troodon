@@ -110,7 +110,7 @@ package body Frames is
 
         glErr : GL.GLenum;
 
-        dragAlpha : Float := 0.5; --(if f.dragging then 0.5 else 1.0);
+        dragAlpha : Float := (if f.dragging then 0.5 else 1.0);
     begin
         -- Ada.Text_IO.Put_Line("Enter drawTitleBar");
 
@@ -133,6 +133,10 @@ package body Frames is
 
             if result = 0 then
                 Ada.Text_IO.Put_Line("Troodon: failed to make context current in drawTitleBar");
+            end if;
+
+            if f.dragging then
+                Ada.Text_IO.Put_Line ("Drawing dragging");
             end if;
 
             -- If we haven't loaded the shader program, do that now.
@@ -396,7 +400,7 @@ package body Frames is
            xcb_create_window_aux_checked (c            => connection,
                                           depth        => 32,
                                           wid          => f.frameID,
-                                          parent       => screen.root, --Compositor.sceneWindow,   -- in automatic mode, should be screen.root
+                                          parent       => screen.root,
                                           x            => geom.x,
                                           y            => geom.y,
                                           width        => unsigned_short(f.width),
@@ -519,6 +523,9 @@ package body Frames is
             else
                 f.dragging := False;
             end if;
+
+            --@TODO there's a more efficient way to do this than re-drawing everything.
+            f.draw;
         end loop;
     end startDrag;
 
@@ -532,7 +539,11 @@ package body Frames is
     begin
         for f of allFrames loop
             f.dragging := False;
+            
+            --@TODO there's a more efficient way to do this than re-drawing everything.
+            f.draw;
         end loop;
+
     end stopDrag;
 
     ---------------------------------------------------------------------------

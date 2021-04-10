@@ -369,13 +369,70 @@ package body Compositor is
     end initCompositor;
 
     ---------------------------------------------------------------------------
+    -- drawShadows (WIP)
+    -- draw drop shadows for all our windows
+    ---------------------------------------------------------------------------
+    -- procedure drawShadows (c          : access xcb.xcb_connection_t;
+    --                        rend       : Render.Renderer;
+    --                        windows    : WindowStack.List) is
+
+    --     -- identify the corners of all our windows.
+    --     type WinVertexArray is array (Natural range 1..(windows.Length * 4)) of Util.Point2D;
+    --     vertices : WinVertexArray;
+
+    --     geomWin : xcb_get_geometry_reply_t;
+    --     shadowX : Float;
+    --     shadowY : Float;
+    --     shadowH : Float;
+    --     shadowW : Float;
+
+    --     idx     : Natural := 1;
+
+    --     -- By changing these values the drop shadow can move to different positions.
+    --     -- Could use negative values here for a glow effect
+    --     offsetX1 : Float := 10.0;
+    --     offsetY1 : Float := 10.0;
+    --     offsetX2 : Float := 10.0;
+    --     offsetY2 : Float := 10.0;
+    -- begin
+    --     for window of windows loop
+    --         geomWin := Util.getWindowGeometry (c, window);
+    --         winX := Float(geomWin.x);
+    --         winY := Float(geomWin.y);
+    --         winW := Float(geomWin.w);
+    --         winH := Float(geomWin.h);
+
+    --         vertices(idx)     := (winX + offsetX1,        winY + winH + offsetY2);
+    --         vertices(idx + 1) := (winX + offsetX1,        winY + offsetY1);
+    --         vertices(idx + 2) := (winX + winW + offsetX2, winY + winH + offsetY2);
+    --         vertices(idx + 3) := (winX + winW + offsetX2, winY + offsetY1);
+
+    --         idx := idx + 4;
+    --     end loop;
+
+    --     GLext.glUseProgram (Render.Shaders.shadowShaderProg);
+
+    --     GLext.genBuffers (1, Render.Shaders.shadowVBO'Access);
+    --     GLext.glEnableVertexAttribArray (GL.GLuint(Render.Shaders.shadowAttribCoord));
+    --     GLext.glBindBuffer (target => GLext.GL_ARRAY_BUFFER,
+    --                         buffer => Render.Shaders.shadowVBO);
+    --     GLext.glVertexAttribPointer (index      => GL.GLuint(Render.Shaders.winAttribCoord),
+    --                                  size       => 2,
+    --                                  c_type     => GL.GL_FLOAT,
+    --                                  normalized => GL.GL_FALSE,
+    --                                  stride     => 0,
+    --                                  pointer    => System.Null_Address);
+    -- end drawShadows;
+
+    ---------------------------------------------------------------------------
     -- blitWindow
     -- @TODO we should buffer all the window quads at once, then just call
     -- glDrawArrays here.
     ---------------------------------------------------------------------------
-    procedure blitWindow (c    : access xcb.xcb_connection_t;
-                          rend : Render.Renderer;
-                          win  : xproto.xcb_window_t) is
+    procedure blitWindow (c            : access xcb.xcb_connection_t;
+                          rend         : Render.Renderer;
+                          win          : xproto.xcb_window_t;
+                          transparency : Float := 1.0) is
         use xcb;
         use xcb_composite;
         use xproto;
@@ -433,7 +490,6 @@ package body Compositor is
             raise CompositorException with "Unable to generate new ID for pixmap";
         end if;
 
-        --@TODO issue here with child window when it contains different pixel sizes?
         cookie := xcb_composite_name_window_pixmap_checked (c      => c,
                                                             window => win,
                                                             pixmap => pixmap);
@@ -442,6 +498,7 @@ package body Compositor is
 
         if error /= null then
             -- If off-screen pixmap isn't ready yet, just go ahead and bail.
+            -- It might not be mapped yet, or some other weird situation.
             return;
         end if;
         -- Ada.Text_IO.Put_Line ("Blitting window " & win'Image);
@@ -461,7 +518,7 @@ package body Compositor is
                                           the_pixmap => X11.Pixmap(pixmap),
                                           attribList => glxPixmapAttr);
 
-        -- TODO: generate all the quads at once, load all textures at once, then
+        -- @TODO generate all the quads at once, load all textures at once, then
         -- index into the quad array for each window.
         GL.glGenTextures (1, tex'Access);
         GL.glBindTexture (GL.GL_TEXTURE_2D, tex);
@@ -490,6 +547,9 @@ package body Compositor is
                                      stride     => 0,
                                      pointer    => System.Null_Address);
 
+        -- per-window Alpha to support transparent windows
+        GLext.glUniform1f (Render.Shaders.winUniformAlpha, transparency);
+
         -- Draw quad. A little confusing since texture coords are (0,0) = bottom left
         dest := (
             1 => (winX,        winY + winH, 0.0, 1.0),   -- Bottom left
@@ -514,15 +574,15 @@ package body Compositor is
     end blitWindow;
 
     -------------------------------------------------------------------------------
-    -- blitAll
+    -- renderScene
     -- Copy the off-screen buffers of all windows into the overlay window.
     --
     -- @TODO track damage and re-render only as necessary?
     --
     -- See http://developer.download.nvidia.com/opengl/specs/GLX_EXT_texture_from_pixmap.txt
     -------------------------------------------------------------------------------
-    procedure blitAll (c    : access xcb.xcb_connection_t;
-                       rend : Render.Renderer) is
+    procedure renderScene (c    : access xcb.xcb_connection_t;
+                           rend : Render.Renderer) is
         use xcb;
         use xproto;
 
@@ -575,6 +635,8 @@ package body Compositor is
 
         GL.glClear (GL.GL_COLOR_BUFFER_BIT);
 
+        --drawShadows (c, rend, winStack);
+
         for win of winStack loop
             blitWindow (c, rend, win);
         end loop;
@@ -584,5 +646,5 @@ package body Compositor is
  
         -- cookie := xcb_ungrab_server (c);
 
-    end blitAll;
+    end renderScene;
 end Compositor;
