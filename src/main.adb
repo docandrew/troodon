@@ -53,12 +53,10 @@ begin
     Render.Fonts.initFonts;
 
     Desktop.initDesktop (connection, rend);
-    Desktop.changeWallpaper (connection, "bg.jpg");
-
-    -- Desktop should be the bottom window on the stack.
-    Compositor.addWindow (Desktop.getWindow);
 
     Render.Shaders.initShaders;
+    
+    Desktop.changeWallpaper (connection, rend, "bg.jpg");
     
     Setup.initEwmh (connection);
 

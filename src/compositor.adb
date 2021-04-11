@@ -18,6 +18,7 @@ with xcb_shape;
 with xproto;
 with xcb_composite;
 
+with Desktop;
 with Render;
 with Render.Shaders;
 with Render.Util;
@@ -571,6 +572,8 @@ package body Compositor is
 
         GLext.glDisableVertexAttribArray (GL.GLuint(Render.Shaders.winAttribCoord));
 
+        -- @TODO delete textures here?
+
     end blitWindow;
 
     -------------------------------------------------------------------------------
@@ -634,6 +637,9 @@ package body Compositor is
                          alpha => 1.0);
 
         GL.glClear (GL.GL_COLOR_BUFFER_BIT);
+
+        -- Always blit the desktop first.
+        blitWindow (c, rend, Desktop.getWindow);
 
         --drawShadows (c, rend, winStack);
 

@@ -10,10 +10,13 @@ with xcb; use xcb;
 with xproto; use xproto;
 with GID;
 with GL;
+with GLext;
 with GLX;
 with X11;
 
 with Render;
+with Render.Shaders;
+with Render.Util;
 with Setup;
 with Util;
 
@@ -30,8 +33,15 @@ package body Desktop is
     wallpaperW : Natural;
     wallpaperH : Natural;
 
-    -- wallpaper   : xcb_pixmap_t := 0;
-    -- wallpaperGC : xcb_gcontext_t;
+    -- Screen information (@TODO - screen(s) information)
+    screenW : Natural;
+    screenH : Natural;
+
+    -- Framebuffer object we'll draw the wallpaper on.
+    fbo : aliased GL.GLuint;
+
+    -- Texture to hold the wallpaper
+    tex : aliased GL.GLuint;
 
     ---------------------------------------------------------------------------
     -- getWindow
@@ -44,9 +54,11 @@ package body Desktop is
     ---------------------------------------------------------------------------
     -- changeWallpaper
     ---------------------------------------------------------------------------
-    procedure changeWallpaper (c : access xcb_connection_t; filename : String) is
-        cookie : xcb_void_cookie_t;
-        error  : access xcb_generic_error_t;
+    procedure changeWallpaper (c    : access xcb_connection_t;
+                               rend : Render.Renderer;
+                               filename : String) is
+        -- cookie : xcb_void_cookie_t;
+        -- error  : access xcb_generic_error_t;
 
         file   : Ada.Streams.Stream_IO.File_Type;
         stream : Ada.Streams.Stream_IO.Stream_Access;
@@ -84,7 +96,7 @@ package body Desktop is
             -- Feedback (ignored here)
             procedure Feedback (percents : Natural) is
             begin
-                null;
+                Ada.Text_IO.Put_Line ("Reading file: " & percents'Image & "%");
             end Feedback;
 
             -- Instantiation of GID template
@@ -115,95 +127,134 @@ package body Desktop is
         loadImage (image, wallpaper);
 
         Ada.Streams.Stream_IO.Close (file);
-        -- Generate a new pixmap and graphics context for it, freeing the old
-        -- one first, if necessary
-        -- if wallpaper /= 0 then
-        --     cookie := xcb_free_pixmap (c, wallpaper);
-        --     cookie := xcb_free_gc (c, wallpaperGC);
-        -- end if;
 
-        -- wallpaper   := xcb_generate_id (c);
-        -- wallpaperGC := xcb_generate_id (c);
-
-        -- Ada.Text_IO.Put_Line ("Troodon: (Desktop) Creating new pixmap for wallpaper");
-        -- cookie := xcb_create_pixmap_checked (c        => c,
-        --                                      depth    => 24,
-        --                                      pid      => wallpaper,
-        --                                      drawable => dtWindow,
-        --                                      width    => unsigned_short(GID.Pixel_width (image)),
-        --                                      height   => unsigned_short(GID.Pixel_height (image)));
-
-        -- error := xcb_request_check (c, cookie);
-        -- if error /= null then
-        --     Ada.Text_IO.Put_Line ("Troodon: (Desktop) Error creating pixmap: " & error.error_code'Image);
-        -- end if;
-
-        -- Ada.Text_IO.Put_Line ("Troodon: (Desktop) Creating new gc for wallpaper");
-        -- cookie := xcb_create_gc_checked (c          => c,
-        --                                  cid        => wallpaperGC,
-        --                                  drawable   => xcb_drawable_t(wallpaper),
-        --                                  value_mask => 0,
-        --                                  value_list => System.Null_Address);
-
-        -- error := xcb_request_check (c, cookie);
-        -- if error /= null then
-        --     Ada.Text_IO.Put_Line ("Troodon: (Desktop) Error creating gc: " & error.error_code'Image);
-        -- end if;
-
-        -- Load image into the pixmap we just created
-
-            -- -- Blit the bytes into our pixmap. 
-            -- -- @Note that for huge wallpapers we would need to split this up into multiple calls.
-            -- -- Consider using SHM here.
-            -- cookie := xcb_put_image_checked (c          => c,
-            --                                  format     => xcb_image_format_t'Pos(XCB_IMAGE_FORMAT_Z_PIXMAP),
-            --                                  drawable   => wallpaper,
-            --                                  gc         => wallpaperGC,
-            --                                  width      => unsigned_short(GID.Pixel_width (image)),
-            --                                  height     => unsigned_short(GID.Pixel_height (image)),
-            --                                  dst_x      => 0,
-            --                                  dst_y      => 0,
-            --                                  left_pad   => 0,
-            --                                  depth      => 24,
-            --                                  data_len   => bytes'Length,
-            --                                  data       => bytes(0)'Access);
-
-            -- error := xcb_request_check (c, cookie);
-            -- if error /= null then
-            --     Ada.Text_IO.Put_Line ("Troodon: (Desktop) Error in xcb_put_image: " & error.error_code'Image);
-            -- end if;
-
-
-        -- Copy it to the window for now, later we'll want to use the GLX context probably.
-        -- Also will need to consider transformations depending on actual wallpaper size.
-        -- cookie := xcb_copy_area_checked (c              => c,
-        --                                  src_drawable   => wallpaper,
-        --                                  dst_drawable   => dtWindow,
-        --                                  gc             => wallpaperGC,
-        --                                  src_x          => 0,
-        --                                  src_y          => 0,
-        --                                  dst_x          => 0,
-        --                                  dst_y          => 0,
-        --                                  width          => unsigned_short(GID.Pixel_width (image)),
-        --                                  height         => unsigned_short(GID.Pixel_height (image)));
-        
-        -- error := xcb_request_check (c, cookie);
-        -- if error /= null then
-        --     Ada.Text_IO.Put_Line ("Troodon: (Desktop) Error copying wallpaper to desktop window: " & error.error_code'Image);
-        -- end if;
+        draw (rend);
     end changeWallpaper;
 
     ---------------------------------------------------------------------------
-    -- draw LEFT OFF HERE
+    -- draw
     ---------------------------------------------------------------------------
-    procedure draw is
+    procedure draw (rend : Render.Renderer) is
+        glxRet : Interfaces.C.int;
+        orthoM : Render.Util.Mat4;
+
+        -- Destination quad to render desktop to.
+        dest   : Render.Util.Box;
     begin
-        -- create texture from wallpaper bytes
-        -- use win shader program w/ screen dimensions ortho
-        -- glx swap buffers
-        null;
+        glxRet := GLX.glXMakeContextCurrent (dpy       => rend.display,
+                                             draw      => dtDrawable,
+                                             read      => dtDrawable,
+                                             ctx       => rend.context);
+
+        GLext.glUseProgram (Render.Shaders.winShaderProg);
+
+        GL.glActiveTexture (GL.GL_TEXTURE0);
+        GL.glGenTextures (1, tex'Access);
+        GL.glBindTexture (GL.GL_TEXTURE_2D, tex);
+        
+        -- Load wallpaper bytes into our texture (and hence the framebuffer)
+        -- @TODO perform scaling, tiling, etc. if the sizes don't match.
+        GL.glTexImage2D (target          => GL.GL_TEXTURE_2D,
+                         level           => 0,
+                         internalFormat  => GL.GL_RGB,
+                         width           => Interfaces.C.int(wallpaperW),
+                         height          => Interfaces.C.int(wallpaperH),
+                         border          => 0,
+                         format          => GL.GL_RGB,
+                         c_type          => GL.GL_UNSIGNED_BYTE,
+                         pixels          => wallpaper(0)'Address);
+
+        GL.glTexParameteri (target => GL.GL_TEXTURE_2D,
+                            pname  => GL.GL_TEXTURE_MIN_FILTER,
+                            param  => GL.GL_LINEAR);
+
+        GL.glTexParameteri (target => GL.GL_TEXTURE_2D,
+                            pname  => GL.GL_TEXTURE_MAG_FILTER,
+                            param  => GL.GL_LINEAR);
+
+        GL.glClearColor (red   => 0.7,
+                         green => 0.0,
+                         blue  => 0.7,
+                         alpha => 1.0);
+
+        GL.glClear (GL.GL_COLOR_BUFFER_BIT);
+
+        -- Set up viewport, projection, uniforms
+        GL.glViewport (x      => 0,
+                       y      => 0,
+                       width  => Interfaces.C.int(screenW),
+                       height => Interfaces.C.int(screenH));
+
+        orthoM := Render.Util.ortho (0.0, Float(screenW), Float(screenH), 0.0, -1.0, 1.0);
+
+        GLext.glUniformMatrix4fv (location  => Render.Shaders.winUniformOrtho,
+                                  count     => 1,
+                                  transpose => GL.GL_TRUE,
+                                  value     => orthoM(1)'Access);
+
+        GLext.glUniform1f (location => Render.Shaders.winUniformAlpha,
+                           v0       => 1.0);
+
+        -- Set up attribs
+        GLext.glGenBuffers (1, Render.Shaders.winVBO'Access);
+        GLext.glEnableVertexAttribArray (GL.GLuint(Render.Shaders.winAttribCoord));
+        GLext.glBindBuffer (target => GLext.GL_ARRAY_BUFFER,
+                            buffer => Render.Shaders.winVBO);
+
+        GLext.glVertexAttribPointer (index      => GL.GLuint(Render.Shaders.winAttribCoord),
+                                     size       => 4,
+                                     c_type     => GL.GL_FLOAT,
+                                     normalized => GL.GL_FALSE,
+                                     stride     => 0,
+                                     pointer    => System.Null_Address);
+
+        -- Quad coords
+        dest := (
+            1 => (0.0,            Float(screenH), 0.0, 1.0),   -- Bottom left
+            2 => (0.0,            0.0,            0.0, 0.0),   -- Top left
+            3 => (Float(screenW), Float(screenH), 1.0, 1.0),   -- Bottom right
+            4 => (Float(screenW), 0.0,            1.0, 0.0)    -- Top right
+        );
+
+        GLext.glBufferData (target => GLext.GL_ARRAY_BUFFER,
+                            size   => dest'Size / 8,
+                            data   => dest'Address,
+                            usage  => GLext.GL_DYNAMIC_DRAW);
+
+        GL.glDrawArrays (mode  => GL.GL_TRIANGLE_STRIP,
+                         first => 0,
+                         count => Interfaces.C.int(dest'Last));
+
+        GLX.glXSwapBuffers (rend.display, dtDrawable);
+
+        GL.glDeleteTextures (1, tex'Access);
+        GLext.glDisableVertexAttribArray (GL.GLuint(Render.Shaders.winAttribCoord));
+        
+        GLext.glUseProgram (0);
 
     end draw;
+
+    ---------------------------------------------------------------------------
+    -- initFramebuffer
+    --
+    -- To draw the wallpaper we perform a framebuffer blit. This sets that up.
+    ---------------------------------------------------------------------------
+    -- procedure initFramebuffer (c        : access xcb_connection_t; 
+    --                            rend     : Render.Renderer) is
+    -- begin
+    --     -- Reserve storage ahead of time for this texture.
+    --     -- GL.glTexImage2D (target         => GL.GL_TEXTURE_2D,
+    --     --                  level          => 0,
+    --     --                  internalFormat => GL.GL_RGB8,          -- alpha doesn't really make sense here.
+    --     --                  width          => screenW,
+    --     --                  height         => screenH,
+    --     --                  border         => 0,
+    --     --                  format         => GL.GL_RGB8,
+    --     --                  c_type         => GL.GL_UNSIGNED_BYTE,
+    --     --                  pixels         => System.Null_Address);
+
+
+    -- end initFramebuffer;
 
     ---------------------------------------------------------------------------
     -- @TODO
@@ -217,6 +268,7 @@ package body Desktop is
         screen           : access xcb_screen_t;
         geom             : xcb_get_geometry_reply_t;
         cookie           : xcb_void_cookie_t;
+        error            : access xcb_generic_error_t;
         desktopAttr      : aliased xcb_create_window_value_list_t;
         desktopValueMask : Interfaces.C.unsigned;
 
@@ -244,6 +296,11 @@ package body Desktop is
                             XCB_CW_BORDER_PIXEL or
                             XCB_CW_COLORMAP or
                             XCB_CW_EVENT_MASK;
+
+        -- Save screen info for later. In the event that additional monitors are detected,
+        -- plugged in, etc. we'll want to update this.
+        screenW := Natural(geom.width);
+        screenH := Natural(geom.height);
 
         cookie :=
             xcb_create_window_aux (c              => c,
@@ -273,21 +330,17 @@ package body Desktop is
                                           data     => wmType'Address);
         end if;
 
-        Ada.Text_IO.Put_Line ("Troodon: (Desktop) Creating OpenGL drawable");
+        Ada.Text_IO.Put_Line ("Troodon: (Desktop) Mapping window");
 
-        -- Dirty hack real quick to get us a drawable but use the X11 context for now
-        -- EXPERIMENT
-        -- junkpix := xcb_generate_id (c);
-        -- cookie := xcb_create_pixmap (c          => c,
-        --                              depth      => 32, 
-        --                              pid        => junkpix, 
-        --                              drawable   => dtWindow, 
-        --                              width      => 16, 
-        --                              height     => 16);
-        -- junkpixGLX := GLX.glXCreatePixmap (dpy => rend.display,
-        --                                    config => rend.fbConfig,
-        --                                    the_pixmap => X11.Pixmap(junkpix),
-        --                                    attribList => null);
+        cookie := xcb_map_window_checked (c, dtWindow);
+
+        error := xcb_request_check (c, cookie);
+
+        if error /= null then
+            Ada.Text_IO.Put_Line ("Troodon: (Desktop) Unable to map desktop window, error:" & error.error_code'Image);
+        end if;
+
+        Ada.Text_IO.Put_Line ("Troodon: (Desktop) Creating OpenGL drawable");
 
         dtGLXWindow := GLX.glXCreateWindow (dpy        => rend.display,
                                             config     => rend.fbConfig,
@@ -296,8 +349,10 @@ package body Desktop is
 
         Ada.Text_IO.Put_Line ("Troodon: (Desktop) Created OpenGL drawable with id:" & dtGLXWindow'Image);
         
-        dtDrawable  := GLX.GLXDrawable(dtGLXWindow);
+        dtDrawable  := GLX.GLXDrawable(dtWindow);
         
+        -- The only _real_ reason to do this here is because we'd like to initShaders, and
+        -- need a drawable and current context to do so.
         glxRet := GLX.glXMakeContextCurrent (dpy       => rend.display,
                                              draw      => dtDrawable,
                                              read      => dtDrawable,

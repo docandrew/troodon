@@ -18,8 +18,21 @@ package Desktop is
     ---------------------------------------------------------------------------
     -- changeWallpaper
     -- Given a filename, set the wallpaper to be the image contained therein
+    -- Redraws the window.
     ---------------------------------------------------------------------------
-    procedure changeWallpaper (c : access xcb_connection_t; filename : String);
+    procedure changeWallpaper (c        : access xcb_connection_t;
+                               rend     : Render.Renderer;
+                               filename : String);
+
+
+    ---------------------------------------------------------------------------
+    -- draw
+    -- Render the desktop (just wallpaper for now)
+    -- @TODO and widgets, and icons, etc.
+    -- @Note that the Desktop uses the same window VBO and shader program that
+    -- the compositor does. Do NOT call this from w/in Compositor.renderScene
+    ---------------------------------------------------------------------------
+    procedure draw (rend : Render.Renderer);
 
     ---------------------------------------------------------------------------
     -- initDesktop

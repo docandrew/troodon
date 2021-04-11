@@ -1,0 +1,8 @@
+// Shadow fragment shader
+#version 130
+
+uniform vec4 color;
+
+void main(void) {
+    gl_FragColor = color;
+}
