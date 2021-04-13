@@ -202,6 +202,9 @@ package body Render.Shaders is
             return 0;
         end if;
 
+        GLext.glDeleteShader (vertShader);
+        GLext.glDeleteShader (fragShader);
+
         return prog;
     end createShaderProgram;
 

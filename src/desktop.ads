@@ -45,4 +45,10 @@ package Desktop is
     procedure initDesktop (c    : access xcb_connection_t;
                            rend : Render.Renderer);
 
+    ---------------------------------------------------------------------------
+    -- teardownDesktop
+    -- Destroy the GLX and X11 windows used by the desktop.
+    ---------------------------------------------------------------------------
+    procedure teardownDesktop (c : access xcb_connection_t;
+                               rend : Render.Renderer);
 end Desktop;

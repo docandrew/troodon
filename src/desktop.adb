@@ -363,4 +363,23 @@ package body Desktop is
         end if;
 
     end initDesktop;
+
+    ---------------------------------------------------------------------------
+    -- teardownDesktop
+    ---------------------------------------------------------------------------
+    procedure teardownDesktop (c : access xcb_connection_t; rend : Render.Renderer) is
+        cookie : xcb_void_cookie_t;
+        error  : access xcb_generic_error_t;
+    begin
+        GLX.glXDestroyWindow (rend.display, GLX.GLXWindow(dtDrawable));
+        
+        cookie := xcb_destroy_window_checked (c, dtWindow);
+
+        error := xcb_request_check (c, cookie);
+
+        if error /= null then
+            Ada.Text_IO.Put_Line ("Troodon: (Desktop) Error destroying desktop window, error:" & error.error_code'Image);
+        end if;
+
+    end teardownDesktop;
 end Desktop;

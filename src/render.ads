@@ -63,4 +63,11 @@ package Render is
     ---------------------------------------------------------------------------
     function initRendering (connection : not null access xcb.xcb_connection_t;
                             display    : not null access Xlib.Display) return Renderer;
+
+    ---------------------------------------------------------------------------
+    -- teardownRendering
+    -- Clean up any rendering contexts and resources in use.    
+    ---------------------------------------------------------------------------
+    procedure teardownRendering (connection : access xcb.xcb_connection_t;
+                                 rend : Render.Renderer);
 end render;

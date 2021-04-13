@@ -313,16 +313,36 @@ package body render is
     end initRendering;
 
     -- @TODO
-    procedure teardownSoftwareRenderer(connection : access xcb.xcb_connection_t) is
+    procedure teardownSoftwareRenderer (connection : access xcb.xcb_connection_t;
+                                        rend : Render.Renderer) is
         -- cookie : xcb.xcb_void_cookie_t;
     begin
         null;
     end teardownSoftwareRenderer;
 
-    -- @TODO
-    procedure teardownGLRenderer(connection : access xcb.xcb_connection_t) is
-        -- cookie : xcb.xcb_void_cookie_t;
+    ---------------------------------------------------------------------------
+    -- teardownGLRenderer
+    ---------------------------------------------------------------------------
+    procedure teardownGLRenderer (connection : access xcb.xcb_connection_t;
+                                  rend : Render.Renderer) is
     begin
-        null;
+        GLX.glXDestroyContext (rend.Display, rend.context);
     end teardownGLRenderer;
-end render;
+
+    ---------------------------------------------------------------------------
+    --
+    ---------------------------------------------------------------------------
+    procedure teardownRendering (connection : access xcb.xcb_connection_t;
+                                 rend : Render.Renderer) is
+    begin
+        case rend.kind is
+            when Render.SOFTWARE =>
+                teardownSoftwareRenderer (connection, rend);
+            when Render.OpenGL =>
+                teardownGLRenderer (connection, rend);
+            when others =>
+                null;
+        end case;
+    end teardownRendering;
+
+end Render;

@@ -12,10 +12,10 @@ with GLX;
 with GLXext;
 with X11;
 with XLib;
-with xcb;
+with xcb; use xcb;
 with xcb_xfixes;
 with xcb_shape;
-with xproto;
+with xproto; use xproto;
 with xcb_composite;
 
 with Desktop;
@@ -29,6 +29,10 @@ package body Compositor is
 
     type OverlayReplyPtr is access all xcb_composite.xcb_composite_get_overlay_window_reply_t;
     
+    -- Overlay window returned from composite extension. We'll actually draw to
+    -- the sceneWindow, which is a child of this overlay.
+    overlayWindow : xproto.xcb_window_t;
+
     -- If supported, the GLX_EXT_texture_from_pixmap extension should be a
     -- faster way to get the XComposite off-screen buffer into a texture that
     -- we can render.
@@ -128,8 +132,6 @@ package body Compositor is
             raise CompositorException with "Troodon: (compositor) Failed to make GLX context current.";
         end if;
 
-        -- Compositor.sceneDrawable := drawable;
-        -- Compositor.sceneWindow   := sceneWin;
     end createGLScene;
 
     ---------------------------------------------------------------------------
@@ -221,7 +223,6 @@ package body Compositor is
 
         cookie     : xcb_void_cookie_t;
         error      : access xcb_generic_error_t;
-        composite  : access constant xcb_query_extension_reply_t;
         root       : xcb_window_t := Setup.getRootWindow (c);
         updateMode : Interfaces.C.unsigned_char;
         
@@ -283,7 +284,8 @@ package body Compositor is
             end if;
 
             Ada.Text_IO.Put_Line ("Troodon: (Compositor) Received overlay window:" & replyOvly.overlay_win'Image);
-            
+            overlayWindow := replyOvly.overlay_win;
+
             Ada.Text_IO.Put_Line ("Troodon: (Compositor) Creating scene window");
             geomOvly := Util.getWindowGeometry (c, replyOvly.overlay_win);
 
@@ -306,7 +308,7 @@ package body Compositor is
                 xcb_create_window_aux_checked (c            => c,
                                                depth        => 32,
                                                wid          => sceneWin,
-                                               parent       => replyOvly.overlay_win,
+                                               parent       => overlayWindow,
                                                x            => 0,
                                                y            => 0,
                                                width        => geomOvly.width,
@@ -324,10 +326,10 @@ package body Compositor is
                 raise CompositorException with "Troodon: (Compositor) Failed to create scene window, error:" & error.error_code'Image;
             end if;
 
-            -- Ada.Text_IO.Put_Line ("Troodon: (compositor) Overlay depth: " & geomOvly.depth'Image);
 
             createGLScene (c, rend, sceneWin);
 
+            -- Set the package globals here.
             Compositor.sceneWindow   := sceneWin;
             Compositor.sceneDrawable := GLX.GLXDrawable(sceneWin);
 
@@ -340,7 +342,7 @@ package body Compositor is
 
             -- Set overlay as pass-through. If we're using server-side compositing we don't
             -- need to do this.
-            allowInputPassthrough (c, replyOvly.overlay_win);
+            allowInputPassthrough (c, overlayWindow);
             allowInputPassthrough (c, sceneWin);
             free (replyOvly);
 
@@ -368,6 +370,49 @@ package body Compositor is
         end if;
 
     end initCompositor;
+
+    ---------------------------------------------------------------------------
+    -- teardownCompositor
+    ---------------------------------------------------------------------------
+    procedure teardownCompositor (c    : access xcb_connection_t;
+                                  rend : Render.Renderer;
+                                  mode : Compositor.CompositeMode) is
+        use xcb_composite;
+
+        cookie : xcb_void_cookie_t;
+        error  : access xcb_generic_error_t;
+        root   : xcb_window_t := Setup.getRootWindow (c);
+        
+        updateMode : Interfaces.C.unsigned_char := 
+        (if mode = MANUAL then
+            xcb_composite_redirect_t'Pos(XCB_COMPOSITE_REDIRECT_MANUAL)
+         else
+            xcb_composite_redirect_t'Pos(XCB_COMPOSITE_REDIRECT_AUTOMATIC));
+    begin
+
+        GLX.glXDestroyWindow (rend.display, GLX.GLXWindow(sceneDrawable));
+
+        cookie := xcb_destroy_window_checked (c, Compositor.sceneWindow);
+        error  := xcb_request_check (c, cookie);
+
+        if error /= null then
+            Ada.Text_IO.Put_Line ("Troodon: (Compositor) Unable to delete the compositor scene window, error:" & error.error_code'Image);
+        end if;
+
+        cookie := xcb_composite_release_overlay_window_checked (c, overlayWindow);
+        error  := xcb_request_check (c, cookie);
+
+        if error /= null then
+            Ada.Text_IO.Put_Line ("Troodon: (Compositor) Unable to release overlay window, error:" & error.error_code'Image);
+        end if;
+
+        cookie := xcb_composite_unredirect_subwindows_checked (c, root, updateMode);
+        error  := xcb_request_check (c, cookie);
+
+        if error /= null then
+            Ada.Text_IO.Put_Line ("Troodon: (Compositor) Unable to un-redirect subwindows, error:" & error.error_code'Image);
+        end if;
+    end teardownCompositor;
 
     ---------------------------------------------------------------------------
     -- drawShadows (WIP)
@@ -535,7 +580,6 @@ package body Compositor is
                             param  => GL.GL_LINEAR);
 
         -- Set up attribs/uniforms for shader program
-
         GLext.glGenBuffers (1, Render.Shaders.winVBO'Access);
         GLext.glEnableVertexAttribArray (GL.GLuint(Render.Shaders.winAttribCoord));
         GLext.glBindBuffer (target => GLext.GL_ARRAY_BUFFER,
@@ -568,11 +612,16 @@ package body Compositor is
                          first => 0,
                          count => Interfaces.C.int(dest'Last));
 
+        -- Cleanup
         glXReleaseTexImageEXT (rend.display, glxPixmap, GLXext.GLX_FRONT_LEFT_EXT);
 
         GLext.glDisableVertexAttribArray (GL.GLuint(Render.Shaders.winAttribCoord));
 
+        GLext.glDeleteBuffers (1, Render.Shaders.winVBO'Access);
+
         -- @TODO delete textures here?
+        GL.glDeleteTextures (1, tex'Access);
+        GLX.glXDestroyPixmap (rend.display, glxPixmap);
 
     end blitWindow;
 

@@ -49,24 +49,22 @@ begin
     rend := Render.initRendering (connection, display);
 
     Compositor.initCompositor (connection, rend, compMode);
-    
     Render.Fonts.initFonts;
-
     Desktop.initDesktop (connection, rend);
-
     Render.Shaders.initShaders;
-    
-    Desktop.changeWallpaper (connection, rend, "bg.jpg");
-    
+    Desktop.changeWallpaper (connection, rend, "bg.jpg");  
     Setup.initEwmh (connection);
-
     Taskbar.Taskbar.Start;
 
+    -- Main loop
     Events.eventLoop (connection, rend, compMode);
 
     -- Cleanup
+    Desktop.teardownDesktop (connection, rend);
+    Compositor.teardownCompositor (connection, rend, compMode);
     Render.Fonts.teardownFonts;
     Render.Shaders.teardownShaders;
+    Render.teardownRendering (connection, rend);
 
     Ada.Text_IO.Put_Line ("Troodon: Disconnecting from X server.");
 

@@ -52,6 +52,15 @@ package Compositor is
                               mode : CompositeMode);
 
     ---------------------------------------------------------------------------
+    -- teardownCompositor
+    -- Destroy the scene window (X11 and GLX), release the overlay, and stop
+    -- redirection.
+    ---------------------------------------------------------------------------
+    procedure teardownCompositor (c    : access xcb_connection_t;
+                                  rend : Render.Renderer;
+                                  mode : Compositor.CompositeMode);
+
+    ---------------------------------------------------------------------------
     -- blitWindow
     -- Take the off-screen pixbuf of a window and draw it to the overlay
     ---------------------------------------------------------------------------
