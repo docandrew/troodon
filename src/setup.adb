@@ -131,7 +131,22 @@ package body Setup is
             raise SetupException with " One or more required extensions is not enabled on the X Server, cannot run Troodon.";
         end if;
 
+        -----------------------------------------------------------------------
         -- Enable required extension versions
+        -----------------------------------------------------------------------
+        GLXVersionQuery := xcb_glx_query_version (c             => c,
+                                                  major_version => 1,
+                                                  minor_version => 4);
+
+        GLXVersionReply := xcb_glx_query_version_reply (c      => c,
+                                                        cookie => GLXVersionQuery,
+                                                        e      => error'Address);
+
+        if error /= null then
+            raise SetupException with "Error getting GLX version, " & error.error_code'Image;
+        end if;
+
+
         XFixesVersionQuery := xcb_xfixes_query_version (c                    => c,
                                                         client_major_version => 5,
                                                         client_minor_version => 0);
@@ -166,9 +181,15 @@ package body Setup is
                     & " sequence:"      & error.sequence'Image;
         end if;
 
-        Ada.Text_IO.Put_Line (" GLX.......: " & (if hasGLX        then "Enabled" else "NOT ENABLED"));
-        Ada.Text_IO.Put_Line (" XComposite: " & (if hasXComposite then "Enabled" else "NOT ENABLED") & " version" & XCompositeVersionReply.major_version'Image & "." & XCompositeVersionReply.minor_version'Image);
-        Ada.Text_IO.Put_Line (" XFixes....: " & (if hasXFixes     then "Enabled" else "NOT ENABLED") & " version" & XFixesVersionReply.major_version'Image & "." & XFixesVersionReply.minor_version'Image);
+        Ada.Text_IO.Put_Line (" GLX.......: " & (if hasGLX        then "Enabled" else "NOT ENABLED") & 
+            " version" & GLXVersionReply.major_version'Image & "." & GLXVersionReply.minor_version'Image);
+        
+        Ada.Text_IO.Put_Line (" XComposite: " & (if hasXComposite then "Enabled" else "NOT ENABLED") & 
+            " version" & XCompositeVersionReply.major_version'Image & "." & XCompositeVersionReply.minor_version'Image);
+        
+        Ada.Text_IO.Put_Line (" XFixes....: " & (if hasXFixes     then "Enabled" else "NOT ENABLED") & 
+            " version" & XFixesVersionReply.major_version'Image & "." & XFixesVersionReply.minor_version'Image);
+
         Ada.Text_IO.Put_Line (" Xinerama..: " & (if hasXinerama   then "Enabled" else "NOT ENABLED"));
         Ada.Text_IO.Put_Line (" XRandr....: " & (if hasXRandr     then "Enabled" else "NOT ENABLED"));
         Ada.Text_IO.Put_Line (" XRender...: " & (if hasXRender    then "Enabled" else "NOT ENABLED"));
@@ -312,8 +333,8 @@ package body Setup is
         cookie       : xcb_void_cookie_t;
 
         screenIter   : aliased xcb_screen_iterator_t;
-        depthIter    : aliased xcb_depth_iterator_t;
-        visIter      : aliased xcb_visualtype_iterator_t;
+        -- depthIter    : aliased xcb_depth_iterator_t;
+        -- visIter      : aliased xcb_visualtype_iterator_t;
         -- visualID     : xcb_visualid_t;
         -- visual       : xcb_visualtype_t;
 

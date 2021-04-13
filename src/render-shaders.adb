@@ -15,6 +15,59 @@ package body Render.Shaders is
     type Symbol is (USELESS) with Size => 64;
 
     ---------------------------------------------------------------------------
+    -- detectShaderVersion
+    ---------------------------------------------------------------------------
+    procedure detectShaderVersion is
+        use Interfaces.C.Strings;
+
+        glVerMajor : aliased GL.GLint;
+        glVerMinor : aliased GL.GLint;
+    begin
+        Ada.Text_IO.Put_Line ("Troodon: (Shaders) Checking OpenGL and GLSL versions.");
+
+        -- Check OpenGL version in use. If it's not high enough, we can't even
+        -- bother detecting the GLSL version
+        GL.glGetIntegerv (GLext.GL_MAJOR_VERSION, glVerMajor'Access);
+        GL.glGetIntegerv (GLext.GL_MINOR_VERSION, glVerMinor'Access);
+
+        Ada.Text_IO.Put_Line ("Troodon: (Shaders) Detected OpenGL version" & glVerMajor'Image & "." & glVerMinor'Image);
+
+        if glVerMajor <= 2 then
+            raise ShaderException with "Detected ancient version of OpenGL, too old to " &
+                                       "run Troodon. Please upgrade your video drivers or Mesa, or turn on direct rendering " &
+                                       "by setting the environment variable LIBGL_ALWAYS_INDIRECT to 0";
+        end if;
+
+
+        declare
+            slVerChars : Interfaces.C.Strings.chars_ptr := GL.glGetString (GLext.GL_SHADING_LANGUAGE_VERSION);
+        begin
+
+            if slVerChars = Interfaces.C.Strings.Null_Ptr then
+                raise ShaderException with "Troodon: (Shaders) Unable to detect GL Shader Language version available. " &
+                                           "You may need to upgrade your video drivers, upgrade Mesa, or turn on direct rendering " &
+                                           "by setting the environment variable LIBGL_ALWAYS_INDIRECT to 0";
+            end if;
+
+            -- Check GLSL version in use
+            declare
+                slVerStr   : String := Interfaces.C.Strings.Value (slVerChars);
+                slMajorVer : Natural := Natural'Value (slVerStr(1..1));
+                slMinorVer : Natural := Natural'Value (slVerStr(3..3));
+            begin
+                Ada.Text_IO.Put_Line ("Detected GLSL version " & slVerStr);
+
+                -- Need GLSL 1.3 or better
+                if slMajorVer <= 1 and slMinorVer < 3 then
+                    raise ShaderException with "Your OpenGL version does not support the shader language version Troodon needs. " &
+                                               "You may need to upgrade your video drivers, upgrade Mesa, or turn on direct rendering " &
+                                               "by setting the environment variable LIBGL_ALWAYS_INDIRECT to 0";
+                end if;
+            end;
+        end;
+    end detectShaderVersion;
+
+    ---------------------------------------------------------------------------
     -- printShaderErrors
     ---------------------------------------------------------------------------
     procedure printShaderErrors (obj : GL.GLUint) is
@@ -395,6 +448,7 @@ package body Render.Shaders is
     ---------------------------------------------------------------------------
     procedure initShaders is
     begin
+        detectShaderVersion;
         initTextShaders;
         initCircleShaders;
         initLineShaders;

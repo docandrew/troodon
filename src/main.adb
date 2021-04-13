@@ -65,6 +65,7 @@ begin
     Events.eventLoop (connection, rend, compMode);
 
     -- Cleanup
+    Render.Fonts.teardownFonts;
     Render.Shaders.teardownShaders;
 
     Ada.Text_IO.Put_Line ("Troodon: Disconnecting from X server.");

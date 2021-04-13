@@ -2,6 +2,7 @@ pragma Ada_2012;
 pragma Style_Checks (Off);
 
 with Interfaces.C; use Interfaces.C;
+with Interfaces.C.Strings; use Interfaces.C.Strings;
 with System;
 limited with glext;
 
@@ -1179,7 +1180,8 @@ package gl is
         Convention => C, 
         External_Name => "glGetError";
 
-   function glGetString (name : GLenum) return access GLubyte  -- gl.h:826
+   -- Troodon: changed return type from access GLubyte
+   function glGetString (name : GLenum) return Interfaces.C.Strings.chars_ptr  -- gl.h:826
    with Import => True, 
         Convention => C, 
         External_Name => "glGetString";

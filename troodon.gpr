@@ -2,13 +2,13 @@ project Troodon is
    type BuildOption is ("release", "debug");
    BuildType : BuildOption := external ("build", "debug");
 
-   HOME := external ("HOME");
+--    HOME := external ("HOME");
    -- SDLADALIB := HOME & "/opt/sdlada/lib/sdlada.release";
    -- SDLADASRC := HOME & "/opt/sdlada/include/sdlada.release";
    -- TTK := "../DAGBuild/DAGBuild-master/src";
 
    for Languages use ("ada", "yasm");
-   for Source_Dirs use ("src/**", "include");
+   for Source_Dirs use ("src/**", "include/**");
    for Object_Dir use "obj";
    for Main use ("main.adb");
 
@@ -22,6 +22,7 @@ project Troodon is
    package Linker is
       case BuildType is
          when "debug" =>
+            -- pg for profiler use
             for Switches ("ada") use (
                "-lxcb",
                "-lxcb-ewmh",
@@ -35,7 +36,8 @@ project Troodon is
                "-lX11-xcb", 
                "-lX11", 
                "-lGL",
-               "-lGLX", 
+               "-lGLX",
+               "-lfontconfig",
                "-lfreetype",
                "-pg"
             );
@@ -54,6 +56,7 @@ project Troodon is
                "-lX11", 
                "-lGL",
                "-lGLX", 
+               "-lfontconfig",
                "-lfreetype"
             );
          when others =>

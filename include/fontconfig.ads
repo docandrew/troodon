@@ -180,7 +180,8 @@ package fontconfig is
   -- * PERFORMANCE OF THIS SOFTWARE.
   --  
 
-   subtype FcChar8 is unsigned_char;  -- /usr/include/fontconfig/fontconfig.h:43
+   -- Troodon: changed type from unsigned_char to char for better interop with C intterface functions
+   subtype FcChar8 is char;  -- /usr/include/fontconfig/fontconfig.h:43
 
    subtype FcChar16 is unsigned_short;  -- /usr/include/fontconfig/fontconfig.h:44
 
