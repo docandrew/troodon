@@ -67,8 +67,15 @@ package Frames is
                           rend       : render.Renderer) return Frame;
 
     ---------------------------------------------------------------------------
-    -- Destroy the frame of an application window, deleting any resources it
-    -- was using and removing it from the list of frames.
+    -- deleteFrame
+    -- Remove 
+    ---------------------------------------------------------------------------
+    procedure deleteFrame (f : Frame);
+
+    ---------------------------------------------------------------------------
+    -- unFrameWindow
+    -- Destroy the frame of an application window, reparenting the window to the
+    -- root window and removing it from the list of frames.
     ---------------------------------------------------------------------------
     procedure unFrameWindow (f : Frame);
 

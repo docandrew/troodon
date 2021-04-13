@@ -499,14 +499,47 @@ package body Frames is
     end frameWindow;
 
     ---------------------------------------------------------------------------
+    -- deleteFrame
+    -- Delete the window and GLX resources used by this frame.
+    ---------------------------------------------------------------------------
+    procedure deleteFrame (f : Frame) is
+        cookie : xcb.xcb_void_cookie_t;
+    begin
+        Ada.Text_IO.Put_Line ("Delete Frame" & f.frameID'Image);
+
+        GLX.glXDestroyWindow (f.surface.renderer.display,
+                              GLX.GLXWindow(f.surface.drawable));
+        
+        -- Remove us from the render scene
+        Compositor.deleteWindow (f.frameID);
+
+        cookie := xcb_destroy_window (f.connection, f.frameID);
+
+        -- Note that allFrames is indexed by app window ID.
+        allFrames.Delete (f.appWindow);
+    end deleteFrame;
+
+    ---------------------------------------------------------------------------
     -- unFrameWindow
     ---------------------------------------------------------------------------
     procedure unFrameWindow (f : Frame) is
         cookie : xcb.xcb_void_cookie_t;
+        geom   : xproto.xcb_get_geometry_reply_t;
     begin
-        Ada.Text_IO.Put_Line ("Unframe Window");
-        -- @TODO cleanup the GLX context, etc.
-        allFrames.Delete (f.appWindow);
+        Ada.Text_IO.Put_Line ("Unframe Window" & f.appWindow'Image);
+
+        -- Figure out where this thing lives
+        geom := Util.getWindowGeometry (f.connection, f.appWindow);
+
+        -- Re-parent to root, at the same location it was before.
+        cookie := xcb_reparent_window (c      => f.connection,
+                                       window => f.appWindow,
+                                       parent => Setup.getRootWindow (f.connection),
+                                       x      => geom.x + FRAME_BORDER_WIDTH,
+                                       y      => geom.y + FRAME_BORDER_WIDTH + TITLEBAR_HEIGHT);
+
+        -- Frame is dead to us now.
+        deleteFrame (f);
     end unFrameWindow;
 
     ---------------------------------------------------------------------------

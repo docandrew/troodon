@@ -35,8 +35,9 @@ package body events is
     dragStartY      : Interfaces.C.short;   
     dragFrame       : xcb_window_t;
     dragInProgress  : Boolean := False;
-    -- mouseX          : Interfaces.C.short;
-    -- mouseY          : Interfaces.C.short;
+
+    -- Set to true if should exit main loop.
+    close           : Boolean := False;
     
     ---------------------------------------------------------------------------
     -- handleMapRequest
@@ -376,6 +377,8 @@ package body events is
     ---------------------------------------------------------------------------
     procedure handleDestroy (connection : access xcb_connection_t;
                              event      : eventPtr) is
+        use Frames;
+
         type DestroyEventPtr is access all xcb_destroy_notify_event_t;
 
         function toDestroyEvent is new Ada.Unchecked_Conversion (Source => eventPtr, Target => DestroyEventPtr);
@@ -383,8 +386,33 @@ package body events is
     begin
         Ada.Text_IO.Put_Line ("Window Destroy: " & destroyEvent.window'Image);
 
+        if hasFrame (destroyEvent.window) then
+            Frames.deleteFrame (getFrameOfWindow (destroyEvent.window));
+        elsif isFrame (destroyEvent.window) then
+            Frames.deleteFrame (getFrameFromList (destroyEvent.window));
+        end if;
+
         -- Compositor.deleteWindow (destroyEvent.window);
     end handleDestroy;
+
+    ---------------------------------------------------------------------------
+    -- handleKeypress
+    ---------------------------------------------------------------------------
+    procedure handleKeypress (connection : access xcb_connection_t;
+                              event      : Events.eventPtr) is
+        type KeyEventPtr is access all xcb_key_press_event_t;
+        function toKeyEvent is new Ada.Unchecked_Conversion (Source => eventPtr, Target => KeyEventPtr);
+        keyEvent : KeyEventPtr := toKeyEvent (event);
+    begin
+        Ada.Text_IO.Put_Line ("Received key event: ");
+        Ada.Text_IO.Put_Line (" Detail:" & keyEvent.detail'Image);
+        Ada.Text_IO.Put_Line (" State:" & keyEvent.state'Image);
+
+        -- ESC
+        if keyEvent.detail = 9 then
+            Events.close := True;
+        end if;
+    end handleKeypress;
 
     ---------------------------------------------------------------------------
     -- dispatchEvent
@@ -422,7 +450,7 @@ package body events is
                 events.handleDestroy (connection, event);
 
             when CONST_XCB_KEY_PRESS =>
-                Ada.Text_IO.Put_Line("Key Pressed");
+                events.handleKeypress (connection, event);
                     
             when others =>
                 null;
@@ -462,6 +490,7 @@ package body events is
                     delay 0.0166;
                 end if;
 
+                exit when close = True;
             end loop;
         else
             loop
@@ -472,8 +501,11 @@ package body events is
                 dispatchEvent (connection, rend, event);
 
                 free (event);
+
+                exit when close = True;
             end loop;
         end if;
         
+        Ada.Text_IO.Put_Line ("Troodon: (Events) Received close command.");
     end eventLoop;
 end events;
