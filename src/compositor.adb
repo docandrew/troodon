@@ -616,12 +616,14 @@ package body Compositor is
         glXReleaseTexImageEXT (rend.display, glxPixmap, GLXext.GLX_FRONT_LEFT_EXT);
 
         GLext.glDisableVertexAttribArray (GL.GLuint(Render.Shaders.winAttribCoord));
-
         GLext.glDeleteBuffers (1, Render.Shaders.winVBO'Access);
 
-        -- @TODO delete textures here?
         GL.glDeleteTextures (1, tex'Access);
         GLX.glXDestroyPixmap (rend.display, glxPixmap);
+
+        -- This is important. xcb_composite_name_window_pixmap_checked keeps the
+        -- pixmap allocated until freed.
+        cookie := xcb_free_pixmap (c, pixmap);
 
     end blitWindow;
 

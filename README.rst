@@ -25,8 +25,6 @@ Software Used
   * License: MIT
   * Author: Gautier de Montmollin
 
-License: MIT
-
 Dependencies
 ############
 These are all pretty normal X11/OpenGL packages/libraries that should be
@@ -52,7 +50,16 @@ Developer Notes
 ###############
 
 Generate Ada spec for glext.h with:
-$ g++ -c -fdump-ada-spec -DGL_GLEXT_PROTOTYPES /usr/include/GL/gl.h
+
+.. code-block::
+
+   g++ -c -fdump-ada-spec -DGL_GLEXT_PROTOTYPES /usr/include/GL/gl.h
+
+To watch for X resource leaks, use:
+
+.. code-block::
+
+   xrestop
 
 Necessary Developer Libs
 ########################
