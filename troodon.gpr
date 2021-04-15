@@ -28,7 +28,8 @@ project Troodon is
                "-lxcb-ewmh",
                "-lxcb-composite", 
                "-lxcb-glx",
-               "-lxcb-xfixes", 
+               "-lxcb-xfixes",
+               "-lxcb-damage",
                "-lxcb-randr",
                "-lxcb-render",
                "-lxcb-shape",
@@ -45,7 +46,8 @@ project Troodon is
             for Switches ("ada") use (
                "-lxcb",
                "-lxcb-ewmh",
-               "-lxcb-composite", 
+               "-lxcb-composite",
+               "-lxcb-damage",
                "-lxcb-glx",
                "-lxcb-xfixes", 
                "-lxcb-randr",
@@ -57,7 +59,11 @@ project Troodon is
                "-lGL",
                "-lGLX", 
                "-lfontconfig",
-               "-lfreetype"
+               "-lfreetype",
+
+               "-ffunction-sections",
+               "-fdata-sections",
+               "-Wl,--gc-sections"
             );
          when others =>
             null;
@@ -65,7 +71,14 @@ project Troodon is
    end Linker;
 
    package Builder is
-      for Executable ("main.adb") use "troodon";
+      case BuildType is
+         when "debug" =>
+            for Executable ("main.adb") use "troodond";
+         when "release" =>
+            for Executable ("main.adb") use "troodon";
+         when others =>
+            null;
+      end case;
    end Builder;
 
    package Pretty_Printer is
@@ -73,7 +86,14 @@ project Troodon is
    end Pretty_Printer;
 
    package Binder is
-      for Switches ("ada") use ("-Es");
+      case BuildType is
+         when "debug" =>
+            for Switches ("ada") use ("-Es");
+         when "release" =>
+            for Switches ("ada") use ("-shared");
+         when others =>
+            null;
+      end case;
    end Binder;
 
    package Compiler is
@@ -90,6 +110,7 @@ project Troodon is
                "-pg");
          when "release" =>
             for Switches ("ada") use (
+               "-flto",
                "-gnat12",
                "-O2",
                "-mtune=native"

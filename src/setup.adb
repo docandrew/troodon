@@ -9,8 +9,9 @@ with xcb; use xcb;
 with xproto; use xproto;
 with xcb_ewmh; use xcb_ewmh;
 
--- Just for checking extensions
+-- Just for checking/enabling extensions
 with xcb_composite;
+with xcb_damage;
 with xcb_glx;
 with xcb_xfixes;
 with xcb_xinerama;
@@ -38,26 +39,52 @@ package body Setup is
     procedure initExtensions (c : access xcb_connection_t) is
         use xcb_glx;
         use xcb_composite;
+        use xcb_damage;
         use xcb_xfixes;
         use xcb_xinerama;
         use xcb_randr;
         use xcb_render;
         use xcb_shape;
 
+        -- GLX
         GLXQuery               : access constant xproto.xcb_query_extension_reply_t;
         hasGLX                 : Boolean := False;
         GLXVersionQuery        : xcb_glx_query_version_cookie_t;
-        GLXVersionReply        : access xcb_glx_query_version_reply_t;
 
+        type GLXVersionReplyT is access all xcb_glx_query_version_reply_t;
+        GLXVersionReply        : GLXVersionReplyT;
+        procedure free is new Ada.Unchecked_Deallocation (Object => xcb_glx_query_version_reply_t,
+                                                          Name   => GLXVersionReplyT);
+
+        -- XComposite
         XCompositeQuery        : access constant xproto.xcb_query_extension_reply_t;
         hasXComposite          : Boolean := False;
         XCompositeVersionQuery : xcb_composite_query_version_cookie_t;
-        XCompositeVersionReply : access xcb_composite_query_version_reply_t;
 
+        type XCompositeVersionReplyT is access all xcb_composite_query_version_reply_t;
+        XCompositeVersionReply : XCompositeVersionReplyT;
+        procedure free is new Ada.Unchecked_Deallocation (Object => xcb_composite_query_version_reply_t,
+                                                          Name   => XCompositeVersionReplyT);
+
+        -- XDamage
+        XDamageQuery           : access constant xproto.xcb_query_extension_reply_t;
+        hasXDamage             : Boolean := False;
+        XDamageVersionQuery    : xcb_damage_query_version_cookie_t;
+
+        type XDamageVersionReplyT is access all xcb_damage_query_version_reply_t;
+        XDamageVersionReply    : XDamageVersionReplyT;
+        procedure free is new Ada.Unchecked_Deallocation (Object => xcb_damage_query_version_reply_t,
+                                                          Name   => XDamageVersionReplyT);
+
+        -- XFixes
         XFixesQuery            : access constant xproto.xcb_query_extension_reply_t;
         hasXFixes              : Boolean := False;
         XFixesVersionQuery     : xcb_xfixes_query_version_cookie_t;
-        XFixesVersionReply     : access xcb_xfixes_query_version_reply_t;
+
+        type XFixesVersionReplyT is access all xcb_xfixes_query_version_reply_t;
+        XFixesVersionReply     : XFixesVersionReplyT;
+        procedure free is new Ada.Unchecked_Deallocation (Object => xcb_xfixes_query_version_reply_t,
+                                                          Name   => XFixesVersionReplyT);
 
         XineramaQuery          : access constant xproto.xcb_query_extension_reply_t;
         hasXinerama            : Boolean := False;
@@ -89,6 +116,9 @@ package body Setup is
         XCompositeQuery := xcb.xcb_get_extension_data (c   => c,
                                                        ext => xcb_composite.xcb_composite_id'Access);
 
+        XDamageQuery    := xcb.xcb_get_extension_data (c   => c,
+                                                       ext => xcb_damage.xcb_damage_id'Access);
+
         XFixesQuery     := xcb.xcb_get_extension_data (c   => c,
                                                        ext => xcb_xfixes.xcb_xfixes_id'Access);
 
@@ -106,6 +136,7 @@ package body Setup is
 
         if GLXQuery         = null or
            XCompositeQuery  = null or
+           XDamageQuery     = null or
            XFixesQuery      = null or
            XineramaQuery    = null or
            XRandrQuery      = null or
@@ -117,6 +148,7 @@ package body Setup is
 
         hasGLX        := GLXQuery.present /= 0;
         hasXComposite := XCompositeQuery.present /= 0;
+        hasXDamage    := XDamageQuery.present /= 0;
         hasXFixes     := XFixesQuery.present /= 0;
         hasXinerama   := XineramaQuery.present /= 0;
         hasXRandr     := XRandrQuery.present /= 0;
@@ -124,9 +156,9 @@ package body Setup is
         hasXShape     := XShapeQuery.present /= 0;
 
         if not (hasGLX    and hasXComposite and
-                hasXFixes and hasXinerama and
-                hasXRandr and hasXRender and
-                hasXShape) then
+                hasXDamage and hasXFixes and
+                hasXinerama and hasXRandr and
+                hasXRender and hasXShape) then
             --@TODO for missing extensions, offer helpful hints about how to obtain them or otherwise
             raise SetupException with " One or more required extensions is not enabled on the X Server, cannot run Troodon.";
         end if;
@@ -181,12 +213,36 @@ package body Setup is
                     & " sequence:"      & error.sequence'Image;
         end if;
 
+        XDamageVersionQuery := xcb_damage_query_version (c => c,
+                                                         client_major_version => 1,
+                                                         client_minor_version => 1);
+
+        XDamageVersionReply := xcb_damage_query_version_reply (c      => c,
+                                                               cookie => XDamageVersionQuery,
+                                                               e      => error'Address);
+
+        if error /= null then
+            raise SetupException with "Error getting XDamage version, " & error.error_code'Image
+                    & " response type:" & error.response_type'Image
+                    & " major:"         & error.major_code'Image 
+                    & " minor:"         & error.minor_code'Image
+                    & " resource:"      & error.resource_id'Image
+                    & " sequence:"      & error.sequence'Image;
+        end if;
+
+        -- Record Damage event # here.
+        DAMAGE_EVENT := XDamageQuery.first_event;
+        Ada.Text_IO.Put_Line ("Troodon: (Setup) Damage event base: " & DAMAGE_EVENT'Image);
+
         Ada.Text_IO.Put_Line (" GLX.......: " & (if hasGLX        then "Enabled" else "NOT ENABLED") & 
             " version" & GLXVersionReply.major_version'Image & "." & GLXVersionReply.minor_version'Image);
         
         Ada.Text_IO.Put_Line (" XComposite: " & (if hasXComposite then "Enabled" else "NOT ENABLED") & 
             " version" & XCompositeVersionReply.major_version'Image & "." & XCompositeVersionReply.minor_version'Image);
         
+        Ada.Text_IO.Put_Line (" XDamage...: " & (if hasXComposite then "Enabled" else "NOT ENABLED") & 
+            " version" & XDamageVersionReply.major_version'Image & "." & XDamageVersionReply.minor_version'Image);
+
         Ada.Text_IO.Put_Line (" XFixes....: " & (if hasXFixes     then "Enabled" else "NOT ENABLED") & 
             " version" & XFixesVersionReply.major_version'Image & "." & XFixesVersionReply.minor_version'Image);
 
@@ -195,6 +251,10 @@ package body Setup is
         Ada.Text_IO.Put_Line (" XRender...: " & (if hasXRender    then "Enabled" else "NOT ENABLED"));
         Ada.Text_IO.Put_Line (" XShape....: " & (if hasXShape     then "Enabled" else "NOT ENABLED"));
 
+        free (GLXVersionReply);
+        free (XCompositeVersionReply);
+        free (XDamageVersionReply);
+        free (XFixesVersionReply);
     end initExtensions;
 
     ---------------------------------------------------------------------------
@@ -202,7 +262,7 @@ package body Setup is
     -- Set up the Extended Window Manager Hints connection
     -- setup.emwh will be non-null if this succeeds.
     ---------------------------------------------------------------------------
-    procedure initEwmh(connection : access xcb_connection_t) is
+    procedure initEwmh (connection : access xcb_connection_t) is
         ewmhCookie : aliased access xcb_intern_atom_cookie_t;
         ewmhError  : aliased access xcb_generic_error_t;
         ignore     : Interfaces.C.unsigned_char;
@@ -223,6 +283,31 @@ package body Setup is
         --ignore2 := xcb_flush(connection);
 
     end initEwmh;
+
+    ---------------------------------------------------------------------------
+    -- initDamage
+    -- Register for events when window contents change.
+    ---------------------------------------------------------------------------
+    procedure initDamage (connection : access xcb_connection_t) is
+        use xcb_damage;
+
+        cookie : xcb_void_cookie_t;
+        error  : access xcb_generic_error_t;
+    begin
+        Setup.damage := xcb_generate_id (connection);
+
+        cookie := xcb_damage.xcb_damage_create_checked (c        => connection, 
+                                                        damage   => Setup.damage,
+                                                        drawable => Setup.getRootWindow (connection),
+                                                        level    => xcb_damage_report_level_t'Pos(XCB_DAMAGE_REPORT_LEVEL_NON_EMPTY));
+        error := xcb_request_check (connection, cookie);
+
+        if error /= null then
+            raise SetupException with "Troodon: (Setup) Unable to create damage request, error:" & error.error_code'Image;
+        end if;
+
+    end initDamage;
+
 
     ---------------------------------------------------------------------------
     -- grabMouse
@@ -269,39 +354,69 @@ package body Setup is
     --     Ada.Text_IO.Put_Line("Grabbed mouse successfully.");
     -- end grabMouse;
 
-    -- procedure grabKeyboard(connection : access xcb_connection_t) is
-    --     keyCookie : xcb_grab_keyboard_cookie_t;
+    ---------------------------------------------------------------------------
+    -- grabKeyboard
+    -- Grab any key in combination with a mod key such as Windows key, alt, etc.
+    ---------------------------------------------------------------------------
+    procedure grabKeyboard(connection : access xcb_connection_t) is
+        --keyCookie : xcb_grab_keyboard_cookie_t;
+        cookie : xcb_void_cookie_t;
+        error  : access xcb_generic_error_t;
+        -- type KeyReplyPtr is access all xcb_grab_keyboard_reply_t;
+        -- procedure free is new Ada.Unchecked_Deallocation (Object => xcb_grab_keyboard_reply_t, Name => KeyReplyPtr);
+        -- keyReply : KeyReplyPtr;
 
-    --     type KeyReplyPtr is access all xcb_grab_keyboard_reply_t;
-    --     procedure free is new Ada.Unchecked_Deallocation(Object => xcb_grab_keyboard_reply_t, Name => KeyReplyPtr);
-    --     keyReply : KeyReplyPtr;
+        root  : xcb_window_t := Setup.getRootWindow (connection);
 
-    --     rootWindow : xcb_window_t := setup.getRootWindow(connection);
-    --     dummy : Interfaces.C.int;
-    -- begin
-    --     Ada.Text_IO.Put_Line("Grabbing keyboard inputs for root window:" & rootWindow'Image);
+        -- every combination of Super + (caps lock and/or num lock).
+        modmask  : unsigned_short := unsigned_short(XCB_MOD_MASK_4);
+        modmask2 : unsigned_short := unsigned_short(XCB_MOD_MASK_4 or XCB_MOD_MASK_LOCK);
+        modmask3 : unsigned_short := unsigned_short(XCB_MOD_MASK_4 or XCB_MOD_MASK_2);
+        modmask4 : unsigned_short := unsigned_short(XCB_MOD_MASK_4 or XCB_MOD_MASK_LOCK or XCB_MOD_MASK_2);
 
-    --     keyCookie := xcb_grab_keyboard(c            => connection,
-    --                                    owner_events => 1,
-    --                                    grab_window  => rootWindow,
-    --                                    time         => XCB_CURRENT_TIME,
-    --                                    pointer_mode => xcb_grab_mode_t'Pos(XCB_GRAB_MODE_ASYNC),
-    --                                    keyboard_mode => xcb_grab_mode_t'Pos(XCB_GRAB_MODE_ASYNC));
+        type ModmaskArr is array (1..4) of unsigned_short;
+        modmasks : ModmaskArr := (modmask, modmask2, modmask3, modmask4);
+    begin
+        Ada.Text_IO.Put_Line("Troodon: (Setup) Grabbing keyboard inputs for root window:" & root'Image);
 
-    --     keyReply := keyReplyPtr(xcb_grab_keyboard_reply (c => connection,
-    --                                          cookie => keyCookie,
-    --                                          e => System.Null_Address));
+        for mask of modmasks loop
+            cookie := xcb_grab_key_checked (c               => connection,
+                                            owner_events    => 1,
+                                            grab_window     => root,
+                                            modifiers       => mask,
+                                            key             => xcb_grab_t'Pos(XCB_GRAB_ANY),
+                                            pointer_mode    => xcb_grab_mode_t'Pos (XCB_GRAB_MODE_ASYNC),
+                                            keyboard_mode   => xcb_grab_mode_t'Pos (XCB_GRAB_MODE_ASYNC));
 
-    --     if keyReply /= null then
-    --         if keyReply.status = xcb_grab_status_t'Pos(XCB_GRAB_STATUS_SUCCESS) then
-    --             Ada.Text_IO.Put_Line("Grabbed keyboard successfully.");
-    --         else
-    --             Ada.Text_IO.Put_Line("Failed to grab keyboard.");
-    --         end if;
+            error := xcb_request_check (connection, cookie);
 
-    --         free(keyReply);
-    --     end if;
-    -- end grabKeyboard;
+            if error /= null then
+                raise SetupException with "Troodon: (Setup) Unable to grab keyboard inputs, error:" & error.error_code'Image;
+            end if;
+        end loop;
+    
+        -- numlock
+        -- keyCookie := xcb_grab_keyboard (c             => connection,
+        --                                 owner_events  => 1,
+        --                                 grab_window   => rootWindow,
+        --                                 time          => XCB_CURRENT_TIME,
+        --                                 pointer_mode  => xcb_grab_mode_t'Pos(XCB_GRAB_MODE_ASYNC),
+        --                                 keyboard_mode => xcb_grab_mode_t'Pos(XCB_GRAB_MODE_ASYNC));
+
+        -- keyReply := keyReplyPtr(xcb_grab_keyboard_reply (c      => connection,
+        --                                                  cookie => keyCookie,
+        --                                                  e      => System.Null_Address));
+
+        -- if keyReply /= null then
+        --     if keyReply.status = xcb_grab_status_t'Pos(XCB_GRAB_STATUS_SUCCESS) then
+        --         Ada.Text_IO.Put_Line("Grabbed keyboard successfully.");
+        --     else
+        --         Ada.Text_IO.Put_Line("Failed to grab keyboard.");
+        --     end if;
+
+        --     free(keyReply);
+        -- end if;
+    end grabKeyboard;
 
     ---------------------------------------------------------------------------
     -- initXlib
@@ -454,7 +569,7 @@ package body Setup is
         checkFatal(connection, cookie, "Cannot ungrab server.");
 
         --grabMouse(connection);
-        --grabKeyboard(connection);
+        grabKeyboard(connection);
 
         return connection;
     end initXcb;

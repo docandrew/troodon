@@ -1,3 +1,4 @@
+with Ada.Real_Time;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Ada.Text_IO;
 with Ada.Unchecked_Conversion;
@@ -10,9 +11,10 @@ with System;
 
 with GL;
 with GLX;
---with xcb_glx;
+
 with xcb; use xcb;
 with xproto; use xproto;
+with xcb_damage;
 
 with Compositor;
 with Frames;
@@ -415,14 +417,28 @@ package body events is
     end handleKeypress;
 
     ---------------------------------------------------------------------------
+    -- clearDamage
+    ---------------------------------------------------------------------------
+    procedure clearDamage (connection : access xcb_connection_t) is
+        cookie : xcb_void_cookie_t;
+    begin
+        cookie := xcb_damage.xcb_damage_subtract (c      => connection,
+                                                  damage => Setup.damage,
+                                                  repair => 0,
+                                                  parts  => 0);
+    end clearDamage;
+
+    ---------------------------------------------------------------------------
     -- dispatchEvent
+    -- @TODO need to report damage during draw requests or geometry changes.
     ---------------------------------------------------------------------------
     procedure dispatchEvent (connection : access xcb_connection_t;
                              rend       : Render.Renderer;
                              event      : Events.eventPtr) is
+        use Compositor;
+        use xcb_damage;
 
         XCB_EVENT_MASK : constant := 2#0111_1111#;
-
     begin
         case (event.response_type and XCB_EVENT_MASK) is
             when CONST_XCB_MAP_REQUEST =>
@@ -451,10 +467,19 @@ package body events is
 
             when CONST_XCB_KEY_PRESS =>
                 events.handleKeypress (connection, event);
-                    
+            
             when others =>
                 null;
+                -- if event.response_type = Setup.DAMAGE_EVENT then
+                --     -- Ada.Text_IO.Put_Line ("Got damage");
+                --     -- clearDamage (connection);
+                --     null;
+                -- else
+                --     -- Ada.Text_IO.Put_Line ("Troodon: (Events) got unknown event " & event.response_type'Image);
+                -- end if;
+
         end case;
+
     end dispatchEvent;
 
     ---------------------------------------------------------------------------
@@ -464,22 +489,35 @@ package body events is
                          rend       : Render.Renderer;
                          mode       : Compositor.CompositeMode)
     is
+        use Ada.Real_Time;
         use Compositor;
-        procedure free is new Ada.Unchecked_Deallocation (Object => xcb_generic_event_t, Name => events.eventPtr);
+
+        FRAME_RATE     : constant := 60;
+        FRAME_RATE_US  : constant Integer := 1_000_000 / 60;
 
         event          : Events.eventPtr;
         ignore         : int;
+
+        nextPeriod     : Ada.Real_Time.Time;
+        startTime      : Ada.Real_Time.Time;
+        endTime        : Ada.Real_Time.Time;
+        render_us      : Time_Span;
+
+        procedure free is new Ada.Unchecked_Deallocation (Object => xcb_generic_event_t, Name => events.eventPtr);
     begin
 
         ignore := xcb_flush (connection);
 
         if mode = Compositor.MANUAL then
             loop
+                startTime := Ada.Real_Time.Clock;
+                nextPeriod := startTime + Ada.Real_Time.Microseconds (FRAME_RATE_US);
+
+                event := Events.eventPtr (xcb_poll_for_event (connection));
+
                 -- If we're compositing ourselves, we need to refresh the
                 -- screen even if no events are headed our way so we poll
                 -- here to avoid blocking.
-                event := Events.eventPtr (xcb_poll_for_event (connection));
-
                 if event /= null then
                     dispatchEvent (connection, rend, event);
                     ignore := xcb_flush (connection);
@@ -487,8 +525,11 @@ package body events is
                 else
                     Compositor.renderScene (connection, rend);
                     -- @TODO adjust delay to keep a smooth frame rate
-                    delay 0.0166;
+                    delay until nextPeriod;
                 end if;
+
+                endTime := Ada.Real_Time.Clock;
+                render_us := endTime - startTime;
 
                 exit when close = True;
             end loop;

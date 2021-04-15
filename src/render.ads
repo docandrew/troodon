@@ -58,16 +58,16 @@ package Render is
     --                       display    : not null access Xlib.Display) return GLX.GLXFBConfig;
 
     ---------------------------------------------------------------------------
-    -- initRendering
+    -- start
     -- Set up the OpenGL Rendering backend
     ---------------------------------------------------------------------------
-    function initRendering (connection : not null access xcb.xcb_connection_t;
-                            display    : not null access Xlib.Display) return Renderer;
+    function start (connection : not null access xcb.xcb_connection_t;
+                    display    : not null access Xlib.Display) return Renderer;
 
     ---------------------------------------------------------------------------
-    -- teardownRendering
+    -- stop
     -- Clean up any rendering contexts and resources in use.    
     ---------------------------------------------------------------------------
-    procedure teardownRendering (connection : access xcb.xcb_connection_t;
-                                 rend : Render.Renderer);
+    procedure stop (connection : access xcb.xcb_connection_t;
+                    rend : Render.Renderer);
 end render;

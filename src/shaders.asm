@@ -85,3 +85,23 @@ global win_fragment_shader_size
 win_fragment_shader_start: incbin "shaders/win_fragment_shader.glsl"
 win_fragment_shader_end:   db 0
 win_fragment_shader_size:  dq $ - win_fragment_shader_start
+
+; -----------------------------------------------------------------------------
+; Shadow Vertex Shader
+; -----------------------------------------------------------------------------
+global shadow_vertex_shader_start
+global shadow_vertex_shader_end
+global shadow_vertex_shader_size
+shadow_vertex_shader_start: incbin "shaders/shadow_vertex_shader.glsl"
+shadow_vertex_shader_end:   db 0
+shadow_vertex_shader_size:  dq $ - shadow_vertex_shader_start
+
+; -----------------------------------------------------------------------------
+; Shadow Fragment Shader
+; -----------------------------------------------------------------------------
+global shadow_fragment_shader_start
+global shadow_fragment_shader_end
+global shadow_fragment_shader_size
+shadow_fragment_shader_start: incbin "shaders/shadow_fragment_shader.glsl"
+shadow_fragment_shader_end:   db 0
+shadow_fragment_shader_size:  dq $ - shadow_fragment_shader_start

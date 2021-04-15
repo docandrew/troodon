@@ -108,7 +108,6 @@ package body Compositor is
                              rend       : Render.Renderer;
                              sceneWin   : xproto.xcb_window_t) is
         glxWindow : GLX.GLXWindow;
-        drawable  : GLX.GLXDrawable;
         glxRet    : int;
     begin
 
@@ -121,11 +120,11 @@ package body Compositor is
             raise CompositorException with "Troodon: (compositor) Failed to create OpenGL overlay window";
         end if;
 
-        drawable := GLX.GLXDrawable (glxWindow);
+        Compositor.sceneDrawable := GLX.GLXDrawable (glxWindow);
 
         glxRet := GLX.glXMakeContextCurrent (dpy  => rend.display,
-                                             draw => drawable,
-                                             read => drawable,
+                                             draw => Compositor.sceneDrawable,
+                                             read => Compositor.sceneDrawable,
                                              ctx  => rend.context);
 
         if glxRet = 0 then
@@ -208,13 +207,13 @@ package body Compositor is
 
 
     ---------------------------------------------------------------------------
-    -- initCompositor
+    -- start
     -- Check for the X Composite extension and, if available, request an
     -- overlay window from the X server.
     ---------------------------------------------------------------------------
-    procedure initCompositor(c    : access xcb_connection_t;
-                             rend : Render.Renderer;
-                             mode : CompositeMode) is
+    procedure start (c    : access xcb_connection_t;
+                     rend : Render.Renderer;
+                     mode : CompositeMode) is
         use GLXext;
         use xcb;
         use xproto;
@@ -331,7 +330,7 @@ package body Compositor is
 
             -- Set the package globals here.
             Compositor.sceneWindow   := sceneWin;
-            Compositor.sceneDrawable := GLX.GLXDrawable(sceneWin);
+            -- Compositor.sceneDrawable := GLX.GLXDrawable(sceneWin);
 
             cookie := xcb_map_window_checked (c, sceneWin);
 
@@ -369,14 +368,14 @@ package body Compositor is
 
         end if;
 
-    end initCompositor;
+    end start;
 
     ---------------------------------------------------------------------------
-    -- teardownCompositor
+    -- stop
     ---------------------------------------------------------------------------
-    procedure teardownCompositor (c    : access xcb_connection_t;
-                                  rend : Render.Renderer;
-                                  mode : Compositor.CompositeMode) is
+    procedure stop (c    : access xcb_connection_t;
+                    rend : Render.Renderer;
+                    mode : Compositor.CompositeMode) is
         use xcb_composite;
 
         cookie : xcb_void_cookie_t;
@@ -389,6 +388,7 @@ package body Compositor is
          else
             xcb_composite_redirect_t'Pos(XCB_COMPOSITE_REDIRECT_AUTOMATIC));
     begin
+        Ada.Text_IO.Put_Line ("Troodon: (Compositor) Shutting down.");
 
         GLX.glXDestroyWindow (rend.display, GLX.GLXWindow(sceneDrawable));
 
@@ -412,63 +412,286 @@ package body Compositor is
         if error /= null then
             Ada.Text_IO.Put_Line ("Troodon: (Compositor) Unable to un-redirect subwindows, error:" & error.error_code'Image);
         end if;
-    end teardownCompositor;
+
+        Ada.Text_IO.Put_Line ("Troodon: (Compositor) Stopped.");
+    end stop;
 
     ---------------------------------------------------------------------------
-    -- drawShadows (WIP)
-    -- draw drop shadows for all our windows
+    -- drawShadow
+    -- draw drop shadow for a window
     ---------------------------------------------------------------------------
-    -- procedure drawShadows (c          : access xcb.xcb_connection_t;
-    --                        rend       : Render.Renderer;
-    --                        windows    : WindowStack.List) is
+    procedure drawShadow  (c          : access xcb.xcb_connection_t;
+                           rend       : Render.Renderer;
+                           window     : xcb_window_t) is
 
-    --     -- identify the corners of all our windows.
-    --     type WinVertexArray is array (Natural range 1..(windows.Length * 4)) of Util.Point2D;
-    --     vertices : WinVertexArray;
+        -- identify the corners of all our windows.
+        geomWin : xcb_get_geometry_reply_t;
 
-    --     geomWin : xcb_get_geometry_reply_t;
-    --     shadowX : Float;
-    --     shadowY : Float;
-    --     shadowH : Float;
-    --     shadowW : Float;
+        shadowX : Float;
+        shadowY : Float;
+        shadowW : Float;
+        shadowH : Float;
 
-    --     idx     : Natural := 1;
+        -- By changing these values the drop shadow can move to different positions.
+        -- Could use negative values here for a glow effect
+        offsetX1 : Float := 10.0;
+        offsetY1 : Float := 10.0;
+        offsetX2 : Float := 20.0;
+        offsetY2 : Float := 20.0;
 
-    --     -- By changing these values the drop shadow can move to different positions.
-    --     -- Could use negative values here for a glow effect
-    --     offsetX1 : Float := 10.0;
-    --     offsetY1 : Float := 10.0;
-    --     offsetX2 : Float := 10.0;
-    --     offsetY2 : Float := 10.0;
+        shadowBox : Render.Util.Box2D;
+
+        VAO : aliased GL.GLuint;
+        VBO : aliased GL.GLuint;
+
+        -- orthoM : Render.Util.Mat4 := Render.Util.ortho (0.0, sceneW, sceneH, 0.0, -1.0, 1.0);
+    begin
+        geomWin := Util.getWindowGeometry (c, window);
+        shadowX := Float(geomWin.x) + offsetX1;
+        shadowY := Float(geomWin.y) + offsetY1;
+        shadowW := Float(geomWin.width) + offsetX2;
+        shadowH := Float(geomWin.height) + offsetY2;
+
+        shadowBox := (
+            1 => (shadowX,           shadowY + shadowH),
+            2 => (shadowX,           shadowY),
+            3 => (shadowX + shadowW, shadowY + shadowH),
+            4 => (shadowX + shadowW, shadowY)
+        );
+
+        -- VAO, VBO
+        GLext.glGenVertexArrays (1, VAO'Access);
+        GLext.glGenBuffers (1, VBO'Access);
+        GLext.glBindVertexArray (VAO);
+
+        GLext.glBindBuffer (GLext.GL_ARRAY_BUFFER, VBO);
+        GLext.glBufferData (GLext.GL_ARRAY_BUFFER, shadowBox'Length, shadowBox'Address, GLext.GL_STATIC_DRAW);
+
+        -- Shader needs shadow dimensions to calculate blur, screen height to invert coords
+        GLext.glUniform4f (location => Render.Shaders.shadowUniformShadow,
+                           v0       => shadowX,
+                           v1       => shadowY,
+                           v2       => shadowW,
+                           v3       => shadowH);
+
+        GLext.glVertexAttribPointer (index      => GL.GLuint(Render.Shaders.shadowAttribCoord),
+                                     size       => 2,
+                                     c_type     => GL.GL_FLOAT,
+                                     normalized => GL.GL_FALSE,
+                                     stride     => 0,
+                                     pointer    => System.Null_Address);
+        GLext.glEnableVertexAttribArray (GL.GLuint(Render.Shaders.shadowAttribCoord));
+
+        GLext.glBufferData (target => GLext.GL_ARRAY_BUFFER,
+                            size   => shadowBox'Size / 8,
+                            data   => shadowBox'Address,
+                            usage  => GLext.GL_DYNAMIC_DRAW);
+
+        -- glErr := GL.glGetError;
+        --Ada.Text_IO.Put_Line ("drawCircle: glBufferData error? " & glErr'Image);
+        GLext.glBindVertexArray (VAO);
+        GL.glDrawArrays (mode  => GL.GL_TRIANGLE_STRIP,
+                         first => 0,
+                         count => Interfaces.C.int(shadowBox'Last));
+
+        -- glErr := GL.glGetError;
+        --Ada.Text_IO.Put_Line ("drawCircle: glDrawArrays error? " & glErr'Image);
+
+        GLext.glDisableVertexAttribArray (GL.GLuint(Render.Shaders.shadowAttribCoord));
+        GLext.glDeleteVertexArrays (1, VAO'Access);
+        GLext.glDeleteBuffers (1, VBO'Access);
+
+    end drawShadow;
+
+    ---------------------------------------------------------------------------
+    -- This is an experimental method to batch up some of the requests like
+    -- xcb_get_geometry, create a bunch of textures at once, but this still has
+    -- issues and isn't ready to go yet.
+    ---------------------------------------------------------------------------
+    -- procedure updateScene (c            : access xcb.xcb_connection_t;
+    --                        rend         : Render.Renderer) is
+    --     use xcb_composite;
+
+    --     -- Set up parallel arrays of all the elements we need here.
+    --     type GeomPtr is access all xcb_get_geometry_reply_t;
+
+    --     numWindows : Natural := Natural(winStack.Length);
+
+    --     -- geometry cookies
+    --     type GCookieArr is array (Natural range 1..numWindows) of xcb_get_geometry_cookie_t;
+    --     type GeomArr    is array (Natural range 1..numWindows) of GeomPtr;
+    --     type QuadArr    is array (Natural range 1..numWindows) of Render.Util.Box with
+    --         Convention => C;
+        
+    --     -- pixmap cookies
+    --     type PCookieArr is array (Natural range 1..numWindows) of xcb_void_cookie_t;
+    --     type PixmapArr  is array (Natural range 1..numWindows) of xcb_pixmap_t;
+        
+    --     -- GLX pixmaps
+    --     type GPixmapArr is array (Natural range 1..numWindows) of GLX.GLXPixmap;
+
+    --     type GlXPixmapAttrList is array (Natural range <>) of aliased Interfaces.C.int;
+
+    --     glxPixmapAttrRGB : GLXPixmapAttrList := (
+    --         GLXext.GLX_TEXTURE_TARGET_EXT, GLXext.GLX_TEXTURE_2D_EXT,
+    --         GLXext.GLX_TEXTURE_FORMAT_EXT, GLXext.GLX_TEXTURE_FORMAT_RGB_EXT,
+    --         0);
+
+    --     glxPixmapAttrRGBA : GLXPixmapAttrList := (
+    --         GLXext.GLX_TEXTURE_TARGET_EXT, GLXext.GLX_TEXTURE_2D_EXT,
+    --         GLXext.GLX_TEXTURE_FORMAT_EXT, GLXext.GLX_TEXTURE_FORMAT_RGBA_EXT,
+    --         0);
+
+    --     glxPixmapAttr : access int;
+
+    --     -- Textures
+    --     type TexArray is array (Natural range 1..numWindows) of aliased GL.GLuint with Convention => C;
+
+    --     -- VAOs, VBOs
+    --     -- type VAOArr is array (Natural range 1..numWindows) of aliased GL.GLuint with Convention => C;
+    --     -- type VBOArr is array (Natural range 1..numWindows) of aliased GL.GLuint with Convention => C;
+
+    --     gcookies : GCookieArr;
+    --     geoms    : GeomArr;
+    --     quads    : QuadArr;
+
+    --     pcookies : PCookieArr;
+    --     pixmaps  : PixmapArr;
+    --     gpixmaps : GPixmapArr;
+    --     error    : access xcb_generic_error_t;
+
+    --     textures : TexArray;
+    --     -- VAOs     : VAOArr;
+    --     -- VBOs     : VBOArr;
+
+    --     procedure free is new Ada.Unchecked_Deallocation (Object => xcb_get_geometry_reply_t,
+    --                                                       Name   => GeomPtr);
+    --     i : Natural := 1;
     -- begin
-    --     for window of windows loop
-    --         geomWin := Util.getWindowGeometry (c, window);
-    --         winX := Float(geomWin.x);
-    --         winY := Float(geomWin.y);
-    --         winW := Float(geomWin.w);
-    --         winH := Float(geomWin.h);
+    --     if numWindows = 0 then
+    --         return;
+    --     end if;
 
-    --         vertices(idx)     := (winX + offsetX1,        winY + winH + offsetY2);
-    --         vertices(idx + 1) := (winX + offsetX1,        winY + offsetY1);
-    --         vertices(idx + 2) := (winX + winW + offsetX2, winY + winH + offsetY2);
-    --         vertices(idx + 3) := (winX + winW + offsetX2, winY + offsetY1);
+    --     Ada.Text_IO.Put_Line ("Drawing" & numWindows'Image & " windows");
 
-    --         idx := idx + 4;
+    --     -- Send out all geometry requests and generate pixmap IDs for each
+    --     for win of winStack loop
+    --         -- We can probably do this even earlier, then do some GL setup while
+    --         -- the server is figuring it out.
+    --         pixmaps(i)  := xcb_generate_id (c);
+    --         gcookies(i) := xcb_get_geometry (c, win);
+
+    --         if pixmaps(i) = 0 then
+    --             raise CompositorException with "Unable to generate new ID for pixmap";
+    --         end if;
+
+    --         pcookies(i) := xcb_composite_name_window_pixmap (c, win, pixmaps(i));
+
+    --         i := i + 1;
     --     end loop;
 
-    --     GLext.glUseProgram (Render.Shaders.shadowShaderProg);
+    --     -- While waiting for geometry requests, create textures
+    --     GL.glGenTextures (int(numWindows), textures(1)'Access);
+    --     GL.glTexParameteri (target => GL.GL_TEXTURE_2D,
+    --                         pname  => GL.GL_TEXTURE_MIN_FILTER,
+    --                         param  => GL.GL_LINEAR);
 
-    --     GLext.genBuffers (1, Render.Shaders.shadowVBO'Access);
-    --     GLext.glEnableVertexAttribArray (GL.GLuint(Render.Shaders.shadowAttribCoord));
+    --     GL.glTexParameteri (target => GL.GL_TEXTURE_2D,
+    --                         pname  => GL.GL_TEXTURE_MAG_FILTER,
+    --                         param  => GL.GL_LINEAR);
+
+    --     -- GLext.glGenVertexArrays (numWindows, VAOs(1)'Access);
+    --     -- GLext.glGenBuffers (numWindows, VBOs(1)'Access);
+
+    --     -- Receive all geometry requests, create quad and GLX pixmap for each window
+    --     for j in 1..numWindows loop
+    --         geoms(j) := xcb_get_geometry_reply (c, gcookies(j), error'Address);
+        
+    --         declare
+    --             winX : Float := Float(geoms(j).x);
+    --             winY : Float := Float(geoms(j).y);
+    --             winW : Float := Float(geoms(j).width);
+    --             winH : Float := Float(geoms(j).height);
+    --         begin
+    --             Ada.Text_IO.Put_Line ("Drawing window at " & winX'Image & "," & winY'Image);
+    --             quads(j) := (
+    --                 1 => (winX,        winY + winH, 0.0, 1.0),   -- Bottom left
+    --                 2 => (winX,        winY,        0.0, 0.0),   -- Top left
+    --                 3 => (winX + winW, winY + winH, 1.0, 1.0),   -- Bottom right
+    --                 4 => (winX + winW, winY,        1.0, 0.0)    -- Top right
+    --             );
+    --         end;
+
+    --         if geoms(j).depth = 32 then
+    --             glxPixmapAttr := glxPixmapAttrRGBA(0)'Access;
+    --         else
+    --             glxPixmapAttr := glxPixmapAttrRGB(0)'Access;
+    --         end if;
+
+    --         gpixmaps(j) := GLX.glXCreatePixmap (dpy        => rend.display,
+    --                                             config     => rend.fbConfig,
+    --                                             the_pixmap => X11.Pixmap(pixmaps(j)),
+    --                                             attribList => glxPixmapAttr);
+
+    --     end loop;
+
+    --     Ada.Text_IO.Put_Line ("c");
+
+    --     --@TODO figure out how to change this per-window.
+    --     GLext.glUniform1f (Render.Shaders.winUniformAlpha, 1.0);
+
+    --     -- Buffer all the quads
+
+    --     GLext.glGenBuffers (1, Render.Shaders.winVBO'Access);
     --     GLext.glBindBuffer (target => GLext.GL_ARRAY_BUFFER,
-    --                         buffer => Render.Shaders.shadowVBO);
+    --                         buffer => Render.Shaders.winVBO);
+
     --     GLext.glVertexAttribPointer (index      => GL.GLuint(Render.Shaders.winAttribCoord),
-    --                                  size       => 2,
+    --                                  size       => 4,
     --                                  c_type     => GL.GL_FLOAT,
     --                                  normalized => GL.GL_FALSE,
     --                                  stride     => 0,
     --                                  pointer    => System.Null_Address);
-    -- end drawShadows;
+    --     GLext.glEnableVertexAttribArray (GL.GLuint(Render.Shaders.winAttribCoord));
+
+    --     GLext.glBufferData (target => GLext.GL_ARRAY_BUFFER,
+    --                         size   => quads'Length, --quads'Size / 8,
+    --                         data   => quads'Address,
+    --                         usage  => GLext.GL_STATIC_DRAW);
+
+        
+    --     Ada.Text_IO.Put_Line ("d");
+    --     GL.glActiveTexture (GL.GL_TEXTURE_2D);
+
+    --     -- Draw the quads
+    --     for j in 1..numWindows loop
+    --         -- bind/re-bind texture
+    --         GL.glBindTexture (GL.GL_TEXTURE_2D, textures(j));
+    --         glXBindTexImageEXT (rend.display, gpixmaps(j), GLXext.GLX_FRONT_LEFT_EXT, null);
+    --         GL.glDrawArrays (mode  => GL.GL_TRIANGLE_STRIP,
+    --                          first => int(j - 1),
+    --                          count => 4);
+    --         glXReleaseTexImageEXT (rend.display, gpixmaps(j), GLXext.GLX_FRONT_LEFT_EXT);
+    --     end loop;
+
+    --     Ada.Text_IO.Put_Line ("e");
+
+    --     -- Cleanup.
+    --     GLext.glDisableVertexAttribArray (GL.GLuint(Render.Shaders.winAttribCoord));
+    --     GLext.glDeleteBuffers (1, Render.Shaders.winVBO'Access);
+
+    --     -- Delete textures
+    --     GL.glDeleteTextures (int(numWindows), textures(1)'Access);
+        
+    --     -- Free all geometry requests and pixmaps
+    --     for j in 1..numWindows loop
+    --         GLX.glXDestroyPixmap (rend.display, gpixmaps(j));
+    --         free(geoms(j));
+    --         pcookies(j) := xcb_free_pixmap (c, pixmaps(j));
+    --     end loop;
+
+    --     Ada.Text_IO.Put_Line ("f");
+    -- end updateScene;
 
     ---------------------------------------------------------------------------
     -- blitWindow
@@ -521,6 +744,8 @@ package body Compositor is
     begin
 
         -- Get window geometry
+        -- @TODO keep track of geometry in a window record in the winStack and
+        -- just reference that here instead of hitting server.
         geomWin := Util.getWindowGeometry (c, win);
 
         winX := Float(geomWin.x);
@@ -529,24 +754,24 @@ package body Compositor is
         winH := Float(geomWin.height);
 
         -- Get pixbuf of window's off-screen storage. We have to perform this step
-        -- because a window's size may have changed between blits.
+        -- because a window's contents may have changed between blits.
         pixmap := xcb_generate_id (c);
 
         if pixmap = 0 then
             raise CompositorException with "Unable to generate new ID for pixmap";
         end if;
 
-        cookie := xcb_composite_name_window_pixmap_checked (c      => c,
-                                                            window => win,
-                                                            pixmap => pixmap);
+        cookie := xcb_composite_name_window_pixmap (c      => c,
+                                                    window => win,
+                                                    pixmap => pixmap);
 
-        error := xcb_request_check (c, cookie);
+        -- error := xcb_request_check (c, cookie);
 
-        if error /= null then
+        -- if error /= null then
             -- If off-screen pixmap isn't ready yet, just go ahead and bail.
             -- It might not be mapped yet, or some other weird situation.
-            return;
-        end if;
+        --     return;
+        -- end if;
         -- Ada.Text_IO.Put_Line ("Blitting window " & win'Image);
 
         -- Determine color depth of window
@@ -692,9 +917,36 @@ package body Compositor is
         -- Always blit the desktop first.
         blitWindow (c, rend, Desktop.getWindow);
 
+        -- need to switch shader programs here.
+        -- GLext.glUseProgram (Render.Shaders.shadowShaderProg);
         --drawShadows (c, rend, winStack);
+        -- GLext.glUseProgram (Render.Shaders.winShaderProg);
 
+        -- blitWindows (c, rend);
         for win of winStack loop
+            GLext.glUseProgram (Render.Shaders.shadowShaderProg);
+            GLext.glUniformMatrix4fv (location  => Render.Shaders.shadowUniformOrtho,
+                                      count     => 1,
+                                      transpose => GL.GL_TRUE,
+                                      value     => orthoM(1)'Access);
+
+            GLext.glUniform4f (location => Render.Shaders.shadowUniformColor,
+                               v0       => 0.0,
+                               v1       => 0.0,
+                               v2       => 0.0,
+                               v3       => 0.5);
+
+            GLext.glUniform1f (location => Render.Shaders.shadowUniformScreenH,
+                               v0       => sceneH);
+
+            drawShadow (c, rend, win);
+            
+            GLext.glUseProgram (Render.Shaders.winShaderProg);
+            GLext.glUniformMatrix4fv (location  => Render.Shaders.winUniformOrtho,
+                                      count     => 1,
+                                      transpose => GL.GL_TRUE,
+                                      value     => orthoM(1)'Access);
+
             blitWindow (c, rend, win);
         end loop;
 

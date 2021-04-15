@@ -101,6 +101,8 @@ package body Render.Fonts is
         font     : access Fontconfig.FcPattern;
         
         fontPath : aliased Interfaces.C.Strings.chars_ptr;
+
+        FCFILE : Interfaces.C.Strings.chars_ptr := Interfaces.C.Strings.New_String (Fontconfig.FC_FILE);
     begin
 
         pattern := Fontconfig.FcNameParse (cName(0)'Access);
@@ -123,11 +125,13 @@ package body Render.Fonts is
             raise FontconfigException with "Troodon: (Fonts) Unable to find a font matching " & name;
         end if;
 
-        getResult := Fontconfig.FcPatternGetString (font, Interfaces.C.Strings.New_String (Fontconfig.FC_FILE), 0, fontPath'Address);
+        getResult := Fontconfig.FcPatternGetString (font, FCFILE, 0, fontPath'Address);
 
         if getResult /= Fontconfig.FcResultMatch then
             raise FontconfigException with "Troodon: (Fonts) Can't get file path from font pattern";
         end if;
+
+        Interfaces.C.Strings.Free (FCFILE);
 
         declare
             retPath : String := Interfaces.C.Strings.Value (fontPath);
@@ -254,21 +258,21 @@ package body Render.Fonts is
     end teardownFreetype;
 
     ---------------------------------------------------------------------------
-    -- initFonts
+    -- start
     ---------------------------------------------------------------------------
-    procedure initFonts is
+    procedure start is
     begin
         initFontconfig;
         initFreetype;
-    end initFonts;
+    end start;
 
     ---------------------------------------------------------------------------
     -- teardownFonts
     ---------------------------------------------------------------------------
-    procedure teardownFonts is
+    procedure stop is
     begin
         teardownFreetype;
         teardownFontconfig;
-    end teardownFonts;
+    end stop;
 
 end Render.Fonts;

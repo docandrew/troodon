@@ -13,15 +13,15 @@ package Render.Fonts is
     function loadGlyph (c : Wide_Wide_Character; fontFace : Freetype.FT_Face) return Boolean;
 
     ---------------------------------------------------------------------------
-    -- initFonts
+    -- start
     -- Initialize Freetype and Fontconfig libraries
     ---------------------------------------------------------------------------
-    procedure initFonts;
+    procedure start;
 
     ---------------------------------------------------------------------------
-    -- teardownFonts
+    -- stop
     -- Perform clean up of Freetype and Fontconfig libraries
     ---------------------------------------------------------------------------
-    procedure teardownFonts;
+    procedure stop;
 
 end Render.Fonts;

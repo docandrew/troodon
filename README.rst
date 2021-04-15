@@ -49,6 +49,14 @@ FAQ
 Developer Notes
 ###############
 
+In debug mode, Troodon produces a binary :code:`obj/troodond` which is 
+compiled with profiling information baked-in. After a run, this will produce a
+file :code:`gmon.out` which can be analyzed with:
+
+.. code-block::
+
+    gprof --demangle=gnat obj/troodond gmon.out
+
 Generate Ada spec for glext.h with:
 
 .. code-block::
@@ -60,6 +68,20 @@ To watch for X resource leaks, use:
 .. code-block::
 
    xrestop
+
+To get info about GLX
+
+.. code-block::
+
+   glxinfo
+
+To get info about the X Server, supported modes, etc.
+
+.. code-block::
+
+   xdpyinfo
+   xdpyinfo -queryExt
+
 
 Necessary Developer Libs
 ########################
@@ -74,6 +96,7 @@ This will depend on your distribution, Ubuntu uses these package names:
 * libx11-xcb-dev
 * libxcb-composite0-dev
 * libxcb-ewmh-dev
+* libxcb-damage0-dev
 * libxcb-glx0-dev
 * libxcb-randr0-dev
 * libxcb-render0-dev
@@ -86,6 +109,8 @@ This will depend on your distribution, Ubuntu uses these package names:
 
 TODOs
 #####
+* Stop pinging XServer for window geometry every time we render. Need to keep
+  geometry locally in the scene graph/create a window structure.
 * Edit includes to use sane Ada Interface types like Unsigned_8, etc.
 * Use Fontconfig to identify fonts, use normal font strings w/ fallbacks.
 * sprinkle glGetError all over the place.

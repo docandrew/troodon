@@ -262,8 +262,8 @@ package body Desktop is
     -- for each display, create a window of the size of that display
     -- eventually make a nice way to get wallpapers aligned
     ---------------------------------------------------------------------------
-    procedure initDesktop (c    : access xcb_connection_t;
-                           rend : Render.Renderer) is
+    procedure start (c    : access xcb_connection_t;
+                     rend : Render.Renderer) is
         
         screen           : access xcb_screen_t;
         geom             : xcb_get_geometry_reply_t;
@@ -349,7 +349,7 @@ package body Desktop is
 
         Ada.Text_IO.Put_Line ("Troodon: (Desktop) Created OpenGL drawable with id:" & dtGLXWindow'Image);
         
-        dtDrawable  := GLX.GLXDrawable(dtWindow);
+        dtDrawable  := GLX.GLXDrawable(dtGLXWindow);
         
         -- The only _real_ reason to do this here is because we'd like to initShaders, and
         -- need a drawable and current context to do so.
@@ -362,15 +362,17 @@ package body Desktop is
             raise DesktopException with "Troodon: (Desktop) Failed to make GLX context current";
         end if;
 
-    end initDesktop;
+    end start;
 
     ---------------------------------------------------------------------------
-    -- teardownDesktop
+    -- stop
     ---------------------------------------------------------------------------
-    procedure teardownDesktop (c : access xcb_connection_t; rend : Render.Renderer) is
+    procedure stop (c : access xcb_connection_t; rend : Render.Renderer) is
         cookie : xcb_void_cookie_t;
         error  : access xcb_generic_error_t;
     begin
+        Ada.Text_IO.Put_Line ("Troodon: (Desktop) Shutting down.");
+
         GLX.glXDestroyWindow (rend.display, GLX.GLXWindow(dtDrawable));
         
         cookie := xcb_destroy_window_checked (c, dtWindow);
@@ -381,5 +383,6 @@ package body Desktop is
             Ada.Text_IO.Put_Line ("Troodon: (Desktop) Error destroying desktop window, error:" & error.error_code'Image);
         end if;
 
-    end teardownDesktop;
+        Ada.Text_IO.Put_Line ("Troodon: (Desktop) Stopped.");
+    end stop;
 end Desktop;

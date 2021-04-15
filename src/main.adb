@@ -46,25 +46,27 @@ begin
 
     Setup.initExtensions (connection);
 
-    rend := Render.initRendering (connection, display);
+    rend := Render.start (connection, display);
 
-    Compositor.initCompositor (connection, rend, compMode);
-    Render.Fonts.initFonts;
-    Desktop.initDesktop (connection, rend);
-    Render.Shaders.initShaders;
+    Compositor.start (connection, rend, compMode);
+    Render.Fonts.start;
+    Desktop.start (connection, rend);
+    Render.Shaders.start;
     Desktop.changeWallpaper (connection, rend, "bg.jpg");  
+    Setup.initDamage (connection);
     Setup.initEwmh (connection);
-    Taskbar.Taskbar.Start;
+    Taskbar.start;
 
     -- Main loop
     Events.eventLoop (connection, rend, compMode);
 
     -- Cleanup
-    Desktop.teardownDesktop (connection, rend);
-    Compositor.teardownCompositor (connection, rend, compMode);
-    Render.Fonts.teardownFonts;
-    Render.Shaders.teardownShaders;
-    Render.teardownRendering (connection, rend);
+    Taskbar.stop (connection);
+    Desktop.stop (connection, rend);
+    Compositor.stop (connection, rend, compMode);
+    Render.Fonts.stop;
+    Render.Shaders.stop;
+    Render.stop (connection, rend);
 
     Ada.Text_IO.Put_Line ("Troodon: Disconnecting from X server.");
 

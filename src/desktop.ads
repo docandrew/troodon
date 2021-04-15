@@ -35,20 +35,20 @@ package Desktop is
     procedure draw (rend : Render.Renderer);
 
     ---------------------------------------------------------------------------
-    -- initDesktop
+    -- start
     -- Creates a window for the wallpaper and desktop icons. This will make the
     -- GLX context set up in Render current, so after this point it is safe to
     -- initialize shaders, etc.
     --
     -- @TODO create window for each randr screen
     ---------------------------------------------------------------------------
-    procedure initDesktop (c    : access xcb_connection_t;
+    procedure start (c    : access xcb_connection_t;
                            rend : Render.Renderer);
 
     ---------------------------------------------------------------------------
-    -- teardownDesktop
+    -- stop
     -- Destroy the GLX and X11 windows used by the desktop.
     ---------------------------------------------------------------------------
-    procedure teardownDesktop (c : access xcb_connection_t;
+    procedure stop (c : access xcb_connection_t;
                                rend : Render.Renderer);
 end Desktop;

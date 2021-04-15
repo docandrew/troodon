@@ -55,14 +55,33 @@ package Render.Shaders is
     winUniformAlpha     : GL.GLint;
     winVBO              : aliased GL.GLuint;
 
+    -- Shadow Shader
+    shadowShaderProg       : GL.GLuint := 0;
+
+    shadowAttribCoord      : GL.GLint;
+    shadowUniformOrtho     : GL.GLint;
+    shadowUniformColor     : GL.GLint;
+    shadowUniformShadow    : GL.GLint;  -- coords/dimensions of shadow
+    shadowUniformScreenH   : GL.GLint;
+
     ---------------------------------------------------------------------------
     -- Part of Troodon's philosophy is being distributed as a single
     -- executable. We bake shaders into the final binary and extract them
     -- here.
     ---------------------------------------------------------------------------
-    procedure initShaders;
-    procedure teardownShaders;
+    
+    ---------------------------------------------------------------------------
+    -- start
+    -- Load, compile shaders into their respective programs
+    ---------------------------------------------------------------------------
+    procedure start;
 
-    procedure printShaderErrors (obj : GL.GLUint);
+    ---------------------------------------------------------------------------
+    -- stop
+    -- Delete shader programs
+    ---------------------------------------------------------------------------
+    procedure stop;
+
+    --procedure printShaderErrors (obj : GL.GLUint);
 
 end Render.Shaders;

@@ -15,10 +15,16 @@ with xcb;
 with xcb_render;
 with xproto;
 
-with setup;
-with util;
+with Setup;
+with Util;
 
-package body render is
+package body Render is
+
+    -- Framebuffer configurations. Need to keep this around so we can free it
+    -- after we're finished. The actual config used is a pointer into the
+    -- structure at this address.
+    -- @TODO consider making a copy of this so we don't need all of it.
+    fbConfigsAddr : System.Address;
 
     ---------------------------------------------------------------------------
     -- initSoftwareRenderer
@@ -126,7 +132,7 @@ package body render is
     is
         use GLX;
 
-        fbConfigsAddr : System.Address;
+        -- fbConfigsAddr : System.Address;
         fbConfigCount : aliased int;
 
         visualAttribs : GLX.IntArray(1..23) := (
@@ -146,12 +152,13 @@ package body render is
     
     begin
         -- Find a list of suitable framebuffer configurations
-        fbConfigsAddr := GLX.glXChooseFBConfig (dpy       => display,
-                                                screen     => Xlib.XDefaultScreen(display),
-                                                attribList => visualAttribs,
-                                                nitems     => fbConfigCount'Access);
+        -- Must be freed w/ XFree
+        Render.fbConfigsAddr := GLX.glXChooseFBConfig (dpy        => display,
+                                                       screen     => Xlib.XDefaultScreen(display),
+                                                       attribList => visualAttribs,
+                                                       nitems     => fbConfigCount'Access);
 
-        if fbConfigsAddr = System.Null_Address or fbConfigCount = 0 then
+        if Render.fbConfigsAddr = System.Null_Address or fbConfigCount = 0 then
             raise OpenGLException with "Troodon: (Render) Unable to get GLX framebuffer config";
         end if;
 
@@ -168,11 +175,12 @@ package body render is
             use xcb_render;
 
             fbConfigs : GLX.GLXFBConfigArray (1..Integer(fbConfigCount)) with
-                Import, Address => fbConfigsAddr;
+                Import, Address => Render.fbConfigsAddr;
 
             type PictFormatReply is access all xcb_render_query_pict_formats_reply_t;
 
             visual  : access XUtil.XVisualInfo;
+            ignore  : Interfaces.C.int;
             cookie  : xcb_render_query_pict_formats_cookie_t;
             formats : PictFormatReply;
             screens : aliased xcb_render_pictscreen_iterator_t;
@@ -185,10 +193,13 @@ package body render is
         begin
 
             -- Get formats 
-            cookie := xcb_render_query_pict_formats (connection);
+            cookie  := xcb_render_query_pict_formats (connection);
+
+            -- allocates on heap!
             formats := xcb_render_query_pict_formats_reply (connection, cookie, System.Null_Address);
 
             for fb of fbConfigs loop
+                -- allocates on heap!
                 visual := GLX.glXGetVisualFromFBConfig (display, fb);
 
                 -- If we use a different visual, glXSwapBuffers fails
@@ -221,6 +232,7 @@ package body render is
                                             visualID := xproto.xcb_visualid_t(visual.the_visualid);
                                             fbConfig := fb;
                                             
+                                            ignore := XLib.XFree (visual.all'Address);
                                             free (formats);
 
                                             return;
@@ -238,6 +250,8 @@ package body render is
 
                         xcb_render_pictscreen_next (screens'Access);
                     end loop;
+
+                    ignore := XLib.XFree (visual.all'Address);
                 end if;
             end loop;
 
@@ -248,10 +262,10 @@ package body render is
     end getFBConfig;
 
     ---------------------------------------------------------------------------
-    -- initRendering
+    -- start
     -- Try to set up OpenGL rendering
     ---------------------------------------------------------------------------
-    function initRendering(connection : not null access xcb.xcb_connection_t;
+    function start(connection : not null access xcb.xcb_connection_t;
                            display    : not null access Xlib.Display) return Renderer
     is
         use GLX;
@@ -310,7 +324,7 @@ package body render is
                                 fbConfig => fb);
     exception
         when OpenGLException => return initSoftwareRenderer(connection);
-    end initRendering;
+    end start;
 
     -- @TODO
     procedure teardownSoftwareRenderer (connection : access xcb.xcb_connection_t;
@@ -325,16 +339,20 @@ package body render is
     ---------------------------------------------------------------------------
     procedure teardownGLRenderer (connection : access xcb.xcb_connection_t;
                                   rend : Render.Renderer) is
+        ignore : Interfaces.C.int;
     begin
         GLX.glXDestroyContext (rend.Display, rend.context);
+        ignore := XLib.XFree (fbConfigsAddr);
     end teardownGLRenderer;
 
     ---------------------------------------------------------------------------
-    --
+    -- stop
     ---------------------------------------------------------------------------
-    procedure teardownRendering (connection : access xcb.xcb_connection_t;
-                                 rend : Render.Renderer) is
+    procedure stop (connection : access xcb.xcb_connection_t;
+                    rend : Render.Renderer) is
     begin
+        Ada.Text_IO.Put_Line ("Troodon: (Render) Shutting down.");
+        
         case rend.kind is
             when Render.SOFTWARE =>
                 teardownSoftwareRenderer (connection, rend);
@@ -343,6 +361,8 @@ package body render is
             when others =>
                 null;
         end case;
-    end teardownRendering;
+
+        Ada.Text_IO.Put_Line ("Troodon: (Render) Stopped.");
+    end stop;
 
 end Render;

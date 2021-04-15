@@ -446,26 +446,86 @@ package body Render.Shaders is
     end initWinShaders;
 
     ---------------------------------------------------------------------------
-    -- initShaders
-    -- Load, compile and link the shaders used for OpenGL rendering
+    -- initShadowShaders
     ---------------------------------------------------------------------------
-    procedure initShaders is
+    procedure initShadowShaders is
+
+        ---------------------------------------------------------------------------
+        -- Shadow Vertex Shader
+        ---------------------------------------------------------------------------
+        shadow_vertex_shader_start : Symbol with Import;
+        shadow_vertex_shader_end   : Symbol with Import;
+        shadow_vertex_shader_size  : Symbol with Import;
+
+        shadowVertexShaderSize : Interfaces.C.size_t with
+            Import, Address => shadow_vertex_shader_size'Address;
+
+        ---------------------------------------------------------------------------
+        -- Shadow Fragment Shader
+        ---------------------------------------------------------------------------
+        shadow_fragment_shader_start : Symbol with Import;
+        shadow_fragment_shader_end   : Symbol with Import;
+        shadow_fragment_shader_size  : Symbol with Import;
+
+        shadowFragmentShaderSize : Interfaces.C.size_t with
+            Import, Address => shadow_fragment_shader_size'Address;
+
+    begin
+        shadowShaderProg := createShaderProgram (vertSource => shadow_vertex_shader_start'Address,
+                                                 vertSize   => shadowVertexShaderSize,
+                                                 fragSource => shadow_fragment_shader_start'Address,
+                                                 fragSize   => shadowFragmentShaderSize);
+
+        if shadowShaderProg = 0 then
+            raise ShaderException with "Unable to load shadow shaders";
+        end if;
+
+        Ada.Text_IO.Put_Line("Troodon: Loaded Shadow Shaders");
+
+        -- Get the uniform and attribs from our shaders
+        shadowAttribCoord   := GLext.glGetAttribLocation  (program => shadowShaderProg,
+                                                           name    => Interfaces.C.To_C ("coord"));
+        shadowUniformColor  := GLext.glGetUniformLocation (program => shadowShaderProg,
+                                                           name    => Interfaces.C.To_C ("color"));
+        shadowUniformOrtho  := GLext.glGetUniformLocation (program => shadowShaderProg,
+                                                           name    => Interfaces.C.To_C ("ortho"));
+        shadowUniformShadow := GLext.glGetUniformLocation (program => shadowShaderProg,
+                                                           name    => Interfaces.C.To_C ("shadow"));
+        shadowUniformScreenH := GLext.glGetUniformLocation (program => shadowShaderProg,
+                                                           name    => Interfaces.C.To_C ("screenHeight"));
+
+        if shadowAttribCoord   = -1 or
+           shadowUniformColor  = -1 or
+           shadowUniformOrtho  = -1 or
+           shadowUniformShadow = -1 or
+           shadowUniformScreenH = -1 then
+             raise ShaderException with "Unable to get shader variables from shadow program.";
+        end if;
+    end initShadowShaders;
+
+    ---------------------------------------------------------------------------
+    -- start
+    ---------------------------------------------------------------------------
+    procedure start is
     begin
         detectShaderVersion;
         initTextShaders;
         initCircleShaders;
         initLineShaders;
         initWinShaders;
-        -- initShadowShaders;
-    end initShaders;
+        initShadowShaders;
+    end start;
 
-    procedure teardownShaders is
+    ---------------------------------------------------------------------------
+    -- stop
+    ---------------------------------------------------------------------------
+    procedure stop is
     begin
         GLext.glDeleteProgram (textShaderProg);
         GLext.glDeleteProgram (circleShaderProg);
         GLext.glDeleteProgram (lineShaderProg);
         GLext.glDeleteProgram (winShaderProg);
-        -- GLext.glDeleteProgram (shadowShaderProg);
-    end teardownShaders;
+        GLext.glDeleteProgram (shadowShaderProg);
+    end stop;
 
 end Render.Shaders;

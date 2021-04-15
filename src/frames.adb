@@ -219,17 +219,17 @@ package body Frames is
                                        windowH  => winH);
 
             -- Draw an X on the close button
-            Render.Widgets.drawLine (fromX    => 0.0,
-                                     fromY    => 0.0,
-                                     toX      => winW,
-                                     toY      => winH,
-                                     width    => 1.0,
-                                     r        => 0.0,
-                                     g        => 0.0,
-                                     b        => 0.0,
-                                     a        => 1.0,
-                                     windowW  => winW,
-                                     windowH  => winH);
+            -- Render.Widgets.drawLine (fromX    => 0.0,
+            --                          fromY    => 0.0,
+            --                          toX      => winW,
+            --                          toY      => winH,
+            --                          width    => 1.0,
+            --                          r        => 0.0,
+            --                          g        => 0.0,
+            --                          b        => 0.0,
+            --                          a        => 1.0,
+            --                          windowW  => winW,
+            --                          windowH  => winH);
 
             -- Render.Widgets.drawLine (fromX    => 1.0,
             --                          fromY    => h / 3.0,

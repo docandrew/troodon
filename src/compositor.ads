@@ -44,21 +44,21 @@ package Compositor is
     procedure bringToTop (win : xproto.xcb_window_t);
 
     ---------------------------------------------------------------------------
-    -- initCompositor
+    -- start
     -- Initialize the compositor
     ---------------------------------------------------------------------------
-    procedure initCompositor (c    : access xcb.xcb_connection_t;
-                              rend : Render.Renderer;
-                              mode : CompositeMode);
+    procedure start (c    : access xcb.xcb_connection_t;
+                     rend : Render.Renderer;
+                     mode : CompositeMode);
 
     ---------------------------------------------------------------------------
-    -- teardownCompositor
+    -- stop
     -- Destroy the scene window (X11 and GLX), release the overlay, and stop
     -- redirection.
     ---------------------------------------------------------------------------
-    procedure teardownCompositor (c    : access xcb_connection_t;
-                                  rend : Render.Renderer;
-                                  mode : Compositor.CompositeMode);
+    procedure stop (c    : access xcb_connection_t;
+                    rend : Render.Renderer;
+                    mode : Compositor.CompositeMode);
 
     ---------------------------------------------------------------------------
     -- blitWindow
